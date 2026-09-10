@@ -8,6 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
     --navy: #12283F;
@@ -18,6 +19,8 @@
     --amber: #D98A2B;
     --amber-dim: #8A5D22;
     --gap-gray: #93A0AC;
+    --ok: #7FB07A;
+    --err: #E0714A;
   }
   * { box-sizing: border-box; }
   html, body {
@@ -29,149 +32,100 @@
   header {
     background: var(--navy-deep);
     padding: 14px 20px;
-    display: flex;
-    align-items: baseline;
-    gap: 10px;
+    display: flex; align-items: baseline; gap: 10px;
     border-bottom: 1px solid #1E3A57;
   }
   header .org { font-size: 13px; letter-spacing: 0.04em; color: var(--line-dim); }
-  header h1 {
-    font-size: 16px;
-    font-weight: 600;
-    margin: 0;
-    color: var(--line);
-  }
-  .layout {
-    display: flex;
-    height: calc(100% - 49px);
-  }
+  header h1 { font-size: 16px; font-weight: 600; margin: 0; }
+  .layout { display: flex; height: calc(100% - 49px); }
   aside {
-    width: 380px;
-    flex-shrink: 0;
-    background: var(--navy);
+    width: 400px; flex-shrink: 0;
     border-right: 1px solid #1E3A57;
-    padding: 18px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    padding: 18px; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 14px;
   }
-  aside label {
-    display: block;
-    font-size: 12px;
-    color: var(--line-dim);
-    margin-bottom: 6px;
-  }
+  label { display: block; font-size: 12px; color: var(--line-dim); margin-bottom: 6px; }
   textarea {
-    width: 100%;
-    min-height: 140px;
-    background: var(--navy-deep);
-    color: var(--line);
-    border: 1px solid #274A6E;
-    border-radius: 2px;
-    padding: 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    line-height: 1.5;
-    resize: vertical;
+    width: 100%; min-height: 130px;
+    background: var(--navy-deep); color: var(--line);
+    border: 1px solid #274A6E; border-radius: 2px; padding: 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    line-height: 1.5; resize: vertical;
   }
-  textarea:focus, button:focus, .link-btn:focus {
-    outline: 2px solid var(--amber);
-    outline-offset: 1px;
+  textarea:focus, button:focus, .link-btn:focus, input:focus {
+    outline: 2px solid var(--amber); outline-offset: 1px;
   }
-  .row { display: flex; gap: 8px; }
+  .row { display: flex; gap: 8px; align-items: center; }
   button {
-    font-family: 'IBM Plex Sans', sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    padding: 9px 14px;
-    border-radius: 2px;
-    border: 1px solid transparent;
-    cursor: pointer;
+    font-family: inherit; font-size: 13px; font-weight: 500;
+    padding: 9px 14px; border-radius: 2px;
+    border: 1px solid transparent; cursor: pointer;
   }
-  button.primary {
-    background: var(--amber);
-    color: var(--navy-deep);
-  }
-  button.primary:disabled {
-    background: var(--amber-dim);
-    color: #C9B99A;
-    cursor: not-allowed;
-  }
-  button.secondary {
-    background: transparent;
-    border-color: #33587D;
-    color: var(--line);
-  }
+  button.primary { background: var(--amber); color: var(--navy-deep); }
+  button.primary:disabled { background: var(--amber-dim); color: #C9B99A; cursor: not-allowed; }
+  button.secondary { background: transparent; border-color: #33587D; color: var(--line); }
   .link-btn {
     background: none; border: none; color: var(--line-dim);
     text-decoration: underline; font-size: 12px; cursor: pointer;
     padding: 0; text-align: left;
   }
-  .summary {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px;
-    color: var(--line-dim);
+  .banner {
+    padding: 10px 12px; border-radius: 2px; font-size: 12.5px;
+    line-height: 1.5; display: none; border-left: 3px solid;
   }
+  .banner.error { background: #33170F; border-color: var(--err); color: #F3C7B6; display: block; }
+  .banner.warn  { background: #33280F; border-color: var(--amber); color: #F0DCB8; display: block; }
+  .banner.ok    { background: #14291A; border-color: var(--ok); color: #C4DFC1; display: block; }
+  .banner code { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; }
+  .summary { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--line-dim); }
   .corner-list {
-    flex: 1;
-    min-height: 120px;
-    overflow-y: auto;
-    border: 1px solid #1E3A57;
-    background: var(--navy-deep);
+    flex: 1; min-height: 100px; max-height: 300px; overflow-y: auto;
+    border: 1px solid #1E3A57; background: var(--navy-deep);
+  }
+  .ring-head {
+    padding: 6px 10px; font-size: 11px; color: var(--line-dim);
+    background: #0E2136; border-bottom: 1px solid #17324C;
+    position: sticky; top: 0;
   }
   .corner-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 5px 10px;
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11.5px;
+    display: flex; justify-content: space-between; padding: 5px 10px;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;
     border-bottom: 1px solid #17324C;
   }
-  .corner-row .desc { color: var(--line); }
   .corner-row .status { color: var(--line-dim); }
   .corner-row.gap .desc { color: var(--gap-gray); font-style: italic; }
-  .corner-row.ok .status { color: #7FB07A; }
-  .corner-row.pending .status { color: var(--line-dim); }
-  .corner-row.error .status { color: #D9683F; }
-  progress {
-    width: 100%;
-    height: 6px;
-    accent-color: var(--amber);
-  }
-  main {
-    flex: 1;
-    position: relative;
-    background: var(--paper);
-  }
+  .corner-row.ok .status { color: var(--ok); }
+  .corner-row.error .status { color: var(--err); }
+  progress { width: 100%; height: 6px; accent-color: var(--amber); }
+  main { flex: 1; position: relative; background: var(--paper); }
   #map { width: 100%; height: 100%; }
   .empty-state {
-    position: absolute; inset: 0;
-    display: flex; align-items: center; justify-content: center;
-    color: #8C8672;
-    font-size: 13px;
-    text-align: center;
-    padding: 40px;
+    position: absolute; inset: 0; display: flex;
+    align-items: center; justify-content: center;
+    color: #8C8672; font-size: 13px; text-align: center; padding: 40px;
   }
-  .empty-state div { max-width: 320px; }
+  .empty-state div { max-width: 320px; line-height: 1.6; }
   .legend {
     position: absolute; bottom: 16px; left: 16px;
-    background: rgba(18,40,63,0.92);
-    color: var(--line);
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 11px;
-    padding: 8px 12px;
-    border-radius: 2px;
-    z-index: 500;
-    display: none;
+    background: rgba(18,40,63,0.94); color: var(--line);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    padding: 10px 12px; border-radius: 2px; z-index: 500; display: none;
   }
-  .legend .swatch { display: inline-block; width: 18px; height: 2px; margin-right: 6px; vertical-align: middle; }
-  .legend div { margin: 3px 0; }
-  footer.note {
-    font-size: 11px;
-    color: var(--line-dim);
-    line-height: 1.5;
+  .legend div { margin: 4px 0; }
+  .legend .box {
+    display: inline-block; width: 16px; height: 10px;
+    margin-right: 7px; vertical-align: middle; border: 1px solid;
   }
+  .verdict {
+    padding: 10px 12px; border-radius: 2px; font-size: 13px;
+    line-height: 1.5; display: none; border-left: 3px solid var(--amber);
+    background: var(--navy-deep);
+  }
+  .verdict strong { font-size: 14px; }
+  .verdict .coords { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line-dim); }
+  .note { font-size: 11px; color: var(--line-dim); line-height: 1.55; }
+  hr.sep { border: none; border-top: 1px solid #1E3A57; margin: 2px 0; }
+  input[type=file] { display: none; }
 </style>
 </head>
 <body>
@@ -184,272 +138,466 @@
 <div class="layout">
   <aside>
     <div>
-      <label for="desc">DIR area/group boundary description</label>
-      <textarea id="desc" placeholder="Paste the metes-and-bounds text from a DIR determination here (e.g. &quot;Commencing in the Pacific Ocean... Thence Easterly to the Northwest corner of Township 20S, Range 6E...&quot;)"></textarea>
+      <label for="desc">DIR area boundary description</label>
+      <textarea id="desc" placeholder="Paste the metes-and-bounds text from a DIR determination, or load a PDF below."></textarea>
     </div>
+
     <div class="row">
-      <button class="primary" id="parseBtn">Parse description</button>
+      <button class="secondary" id="pdfBtn" type="button">Load from PDF</button>
       <button class="secondary" id="exampleBtn" type="button">Load example</button>
+      <input type="file" id="pdfInput" accept="application/pdf">
     </div>
+
+    <button class="primary" id="plotBtn">Plot boundary</button>
+    <progress id="progress" value="0" max="1" style="display:none;"></progress>
+
+    <div class="banner" id="banner"></div>
     <div class="summary" id="summary"></div>
     <div class="corner-list" id="cornerList"></div>
-    <div class="row">
-      <button class="primary" id="plotBtn" disabled>Plot boundary on map</button>
+
+    <hr class="sep">
+    <div class="verdict" id="verdict"></div>
+    <div class="note" id="checkHint" style="display:none;">
+      Click anywhere on the map to check whether a job location falls
+      inside Area 1.
     </div>
-    <progress id="progress" value="0" max="1" style="display:none;"></progress>
+
     <button class="link-btn" id="downloadBtn" style="display:none;">Download boundary.geojson</button>
-    <footer class="note">
-      Corners are looked up live from BLM's public California PLSS map
-      service (gis.blm.gov) — a federal government data source, no login
-      required. Segments that follow a state border or the coastline
-      rather than a township corner are flagged as gaps and drawn as a
-      dashed line for manual review.
-    </footer>
+
+    <div class="note">
+      Corners come from BLM's public California PLSS map service
+      (gis.blm.gov) — federal government data, no login or key required.
+      Edges that follow a coastline or state border are drawn dashed and
+      closed with a straight line, so shading near those edges is
+      approximate.
+    </div>
   </aside>
 
   <main>
     <div id="map"></div>
     <div class="empty-state" id="emptyState">
-      <div>Paste a boundary description on the left, parse it, then plot
-      it here. Try "Load example" to see it work on the CA Operating
-      Engineer Area 1/2 description.</div>
+      <div>Paste a boundary description, or click "Load example" then
+      "Plot boundary" to see it work on the Operating Engineer Area 1
+      description.</div>
     </div>
     <div class="legend" id="legend">
-      <div><span class="swatch" style="background:#D98A2B;"></span>Plotted from PLSS corners</div>
-      <div><span class="swatch" style="background:#93A0AC; border-bottom:1px dashed #93A0AC; height:0;"></span>Unresolved gap — verify manually</div>
+      <div><span class="box" style="background:rgba(217,138,43,0.25); border-color:#D98A2B;"></span>Area 1 — inside described boundary</div>
+      <div><span class="box" style="background:transparent; border-color:#93A0AC;"></span>Area 2 — all California outside it</div>
+      <div><span class="box" style="background:rgba(147,160,172,0.18); border-color:#93A0AC;"></span>Excluded from Area 1</div>
     </div>
   </main>
 </div>
 
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
 const FEATURE_SERVER = "https://gis.blm.gov/caarcgis/rest/services/lands/BLM_CA_CADNSDI/FeatureServer/1/query";
-const MERIDIAN_LIKE = { "Mount Diablo": "%Diablo%", "Humboldt": "%Humboldt%" };
+const MERIDIAN_LIKE = {
+  "Mount Diablo": "%Diablo%",
+  "Humboldt": "%Humboldt%",
+  "San Bernardino": "%Bernardino%",
+};
 const CORNER_MAP = { northeast: "NE", northwest: "NW", southeast: "SE", southwest: "SW" };
 
-const CORNER_RE = /(Northeast|Northwest|Southeast|Southwest)\s+corner\s+of\s+Township\s+(\d+)\s*([NS])\s*,?\s*Range\s+(\d+)\s*([EW])/gi;
-const MERIDIAN_RE = /(Mount Diablo Base and Meridian|Humboldt Base Line)/gi;
-const NON_PLSS_RE = /(California\/Nevada State Border|California\/Oregon State Border|into the Pacific Ocean|in the Pacific Ocean)/gi;
+const CORNER_SRC = "(Northeast|Northwest|Southeast|Southwest)\\s+corner\\s+of\\s+Township\\s+(\\d+)\\s*([NS])\\s*,?\\s*Range\\s+(\\d+)\\s*([EW])";
+const MERIDIAN_SRC = "(Mount Diablo|Humboldt|San Bernardino)\\s+(?:Base\\s+(?:and\\s+Meridian|Line)|Meridian)";
+const NONPLSS_SRC = "(California\\s*/\\s*Nevada State Border|California\\s*/\\s*Oregon State Border|Pacific Ocean)";
+const EXCLUDE_SRC = "(excluding|less and except|save and except|excepting)";
 
-const EXAMPLE_TEXT = `Commencing in the Pacific Ocean on the extension of the Southerly line of Township 19S, of the Mount Diablo Base and Meridian, Thence Easterly along the Southerly line of Township 19S, to the Northwest corner of Township 20S, Range 6E, Thence Southerly to the Southwest corner of Township 20S, Range 6E, Thence Easterly to the Northwest corner of Township 21S, Range 7E, Thence Southerly to the Southwest corner of Township 21S, Range 7E, Thence Easterly to the Northwest corner of Township 22S, Range 9E, Thence Southerly to the Southwest corner of Township 22S, Range 9E, Thence Easterly to the Northwest corner of Township 23S, Range 10E, Thence Southerly to the Southwest corner of Township 24S, Range 10E, Thence Easterly to the Southwest corner of Township 24S, Range 31E, Thence Northerly to the Northeast corner of Township 20S, Range 31E, Thence Westerly to the Southeast corner of Township 19S, Range 29E, Thence Northerly to the Northeast corner of Township 17S, Range 29E, Thence Westerly into the Pacific Ocean.`;
+const EXAMPLE_TEXT = `Commencing in the Pacific Ocean on the extension of the Southerly line of Township 19S, of the Mount Diablo Base and Meridian, Thence Easterly along the Southerly line of Township 19S, to the Northwest corner of Township 20S, Range 6E, Thence Southerly to the Southwest corner of Township 20S, Range 6E, Thence Easterly to the Northwest corner of Township 21S, Range 7E, Thence Southerly to the Southwest corner of Township 21S, Range 7E, Thence Easterly to the Northwest corner of Township 22S, Range 9E, Thence Southerly to the Southwest corner of Township 22S, Range 9E, Thence Easterly to the Northwest corner of Township 23S, Range 10E, Thence Southerly to the Southwest corner of Township 24S, Range 10E, Thence Easterly to the Southwest corner of Township 24S, Range 31E, Thence Northerly to the Northeast corner of Township 20S, Range 31E, Thence Westerly to the Southeast corner of Township 19S, Range 29E, Thence Northerly to the Northeast corner of Township 17S, Range 29E, Thence Westerly to the Southeast corner of Township 16S, Range 28E, Thence Northerly to the Northeast corner of Township 13S, Range 28E, Thence Westerly to the Southeast corner of Township 12S, Range 27E, Thence Northerly to the Northeast corner of Township 12S, Range 27E, Thence Westerly to the Southeast corner of Township 11S, Range 26E, Thence Northerly to the Northeast corner of Township 11S, Range 26E, Thence Westerly to the Southeast corner of Township 10S, Range 25E, Thence Northerly to the Northeast corner of Township 9S, Range 25E, Thence Westerly to the Southeast corner of Township 8S, Range 24E, Thence Northerly to the Northeast corner of Township 8S, Range 24E, Thence Westerly to the Southeast corner of Township 7S, Range 23E, Thence Northerly to the Northeast corner of Township 6S, Range 23E, Thence Westerly to the Southeast corner of Township 5S, Range 20E, Thence Northerly to the Northeast corner of Township 5S, Range 20E, Thence Westerly to the Southeast corner of Township 4S, Range 19E, Thence Northerly to the Northeast corner of Township 1S, Range 19E, Thence Westerly to the Southeast corner of Township 1N, Range 18E, Thence Northerly to the Northeast corner of Township 3N, Range 18E, Thence Westerly to the Southeast corner of Township 4N, Range 17E, Thence Northerly to the Northeast corner of Township 4N, Range 17E, Thence Westerly to the Southeast corner of Township 5N, Range 15E, Thence Northerly to the Northeast corner of Township 5N, Range 15E, Thence Westerly to the Southeast corner of Township 6N, Range 14E, Thence Northerly to the Northeast corner of Township 10N, Range 14E, Thence Easterly along the Southern line of Township 11N, to the California/Nevada State Border, Thence Northerly along the California/Nevada State Border to the Northerly line of Township 17N, Thence Westerly to the Southeast corner of Township 18N, Range 10E, Thence Northerly to the Northeast corner of Township 20N, Range 10E, Thence Westerly to the Southeast corner of Township 21N, Range 9E, Thence Northerly to the Northeast corner of Township 21N, Range 9E, Thence Westerly to the Southeast corner of Township 22N, Range 8E, Thence Northerly to the Northeast corner of Township 22N, Range 8E, Thence Westerly to the Northwest corner of Township 22N, Range 8E, Thence Northerly to the Southwest corner of Township 27N, Range 8E, Thence Easterly to the Southeast corner of Township 27N, Range 8E, Thence Northerly to the Northeast corner of Township 28N, Range 8E, Thence Westerly to the Southeast corner of Township 29N, Range 6E, Thence Northerly to the Northeast corner of Township 32N, Range 6E, Thence Westerly to the Northwest corner of Township 32N, Range 6E, Thence Northerly to the Northeast corner of Township 35N, Range 5E, Thence Westerly to the Southeast corner of Township 36N, Range 3E, Thence Northerly to the Northeast corner of township 36N, Range 3E, Thence Westerly to the Southeast corner of Township 37N, Range 1W, Thence Northerly to the Northeast corner of Township 38N, Range 1W, Thence Westerly to the Southeast corner of Township 39N, Range 2W, Thence Northerly to the Northeast corner of Township 40N, Range 2W, Thence Westerly to the Southeast corner of Township 41N, Range 4W, Thence Northerly to the Northeast corner of Township 42N, Range 4W, Thence Westerly to the Southeast corner of Township 43N, Range 5W, Thence Northerly to the California/Oregon State Border, Thence Westerly along the California/Oregon State Border to the Westerly Boundary of Township Range 8W, Thence Southerly to the Southwest corner of Township 43N, Range 8W, Thence Easterly to the Southeast corner of Township 43N, Range 8W, Thence Southerly to the Southwest corner of Township 42N, Range 7W, Thence Easterly to the Southeast corner of Township 42N, Range 7W, Thence Southerly to the Southwest corner of Township 41N, Range 6W, Thence Easterly to the Northwest corner of Township 40N, Range 5W, Thence Southerly to the Southwest corner of Township 38N, Range 5W, Thence Westerly to the Northwest corner of Township 37N, Range 6W, Thence Southerly to the Southwest corner of Township 35N, Range 6W, Thence Westerly to the Northwest corner of Township 34N, Range 10W, Thence Southerly to the Southwest corner of Township 31N, Range 10W, Thence Easterly to the Northwest corner of Township 30N, Range 9W, Thence Southerly to the Southwest corner of Township 30N, Range 9W, Thence Easterly to the Northwest corner of Township 29N, Range 8W, Thence Southerly to the Southwest corner of Township 23N, Range 8W, Thence Easterly to the Northwest corner of Township 22N, Range 6W, Thence Southerly to the Southwest corner of Township 16N, Range 6W, Thence Westerly to the Southeast corner of Township 16N, Range 9W, Thence Northerly to the Northeast corner of Township 16N, Range 9W, Thence Westerly to the Southeast corner of Township 17N, Range 12W, Thence Northerly to the Northeast corner of Township 18N, Range 12W, Thence Westerly to the Northwest corner of Township 18N, Range 15W, Thence Southerly to the Southwest corner of Township 14N, Range 15W, Thence Easterly to the Northwest corner of Township 13N, Range 14W, Thence Southerly to the Southwest corner of Township 13N, Range 14W, Thence Easterly to the Northwest corner of Township 12N, Range 13W, Thence Southerly to the Southwest corner of Township 12N, Range 13W, Thence Easterly to the Northwest corner of Township 11N, Range 12W, Thence Southerly into the Pacific Ocean and Commencing in the Pacific Ocean on the extension of the Humboldt Base Line, Thence Easterly to the Northwest corner of Township 1S, Range 2E, Thence Southerly to the Southwest corner of Township 2S, Range 2E, Thence Easterly to the Northwest corner of Township 3S, Range 3E, Thence Southerly to the Southwest corner of Township 5S, Range 3E, Thence Easterly to the Southeast corner of Township 5S, Range 4E, Thence Northerly to the Northeast corner of Township 4S, Range 4E, Thence Westerly to the Southeast corner of Township 3S, Range 3E, Thence Northerly to the Northeast corner of Township 5N, Range 3E, Thence Easterly to the Southeast corner of Township 6N, Range 5E, Thence Northerly to the Northeast corner of Township 7N, Range 5E, Thence Westerly to the Southeast corner of Township 8N, Range 3E, Thence Northerly to the Northeast corner of Township 9N, Range 3E, Thence Westerly to the Southeast corner of Township 10N, Range 1E, Thence Northerly to the Northeast corner of Township 13N, Range 1E, Thence Westerly into the Pacific Ocean, excluding that portion of Northern California contained within the following lines: Commencing at the Southwest corner of Township 12N, Range 11E, of the Mount Diablo Base and Meridian, Thence Easterly to the Southeast corner of Township 12N, Range 16E, Thence Northerly to the Northeast corner of Township 12N, Range 16E, Thence Westerly to the Southeast corner of Township 13N, Range 15E, Thence Northerly to the Northeast corner of Township 13N, Range 15E, Thence Westerly to the Southeast corner of Township 14N, Range 14E, Thence Northerly to the Northeast corner of Township 16N, Range 14E, Thence Westerly to the Northwest corner of Township 16N, Range 12E, Thence Southerly to the Southwest corner of Township 16N, Range 12E, Thence Westerly to the Northwest corner of Township 15N, Range 11E, Thence Southerly to the point of beginning at the Southwest corner of Township 12N, Range 11E.`;
 
-function findMeridian(text, uptoIndex) {
-  let last = "Mount Diablo";
+/* ---------------- parsing ---------------- */
+
+// Split the description into rings. Each "Commencing" starts a new ring;
+// a ring is a HOLE (cut out of Area 1) if the text just before it says
+// "excluding" / "less and except" / similar.
+function splitRings(text) {
+  const re = /Commencing/gi;
+  const starts = [];
   let m;
-  const re = new RegExp(MERIDIAN_RE.source, "gi");
+  while ((m = re.exec(text)) !== null) starts.push(m.index);
+  if (!starts.length) return [{ text, role: "outer", label: "Boundary" }];
+  if (starts[0] > 40) starts.unshift(0);
+
+  const rings = [];
+  for (let i = 0; i < starts.length; i++) {
+    const chunk = text.slice(starts[i], i + 1 < starts.length ? starts[i + 1] : text.length);
+    const lookback = text.slice(Math.max(0, starts[i] - 220), starts[i]);
+    const isHole = new RegExp(EXCLUDE_SRC, "i").test(lookback);
+    rings.push({ text: chunk, role: isHole ? "hole" : "outer", label: "" });
+  }
+  // label rings by meridian for the UI
+  let outerN = 0, holeN = 0;
+  for (const r of rings) {
+    const mm = new RegExp(MERIDIAN_SRC, "i").exec(r.text);
+    const mer = mm ? normalizeMeridian(mm[1]) : null;
+    if (r.role === "hole") { holeN++; r.label = `Excluded area ${holeN}${mer ? " · " + mer : ""}`; }
+    else { outerN++; r.label = `Area 1 · part ${outerN}${mer ? " · " + mer : ""}`; }
+  }
+  return rings;
+}
+
+function normalizeMeridian(raw) {
+  if (/Humboldt/i.test(raw)) return "Humboldt";
+  if (/Bernardino/i.test(raw)) return "San Bernardino";
+  return "Mount Diablo";
+}
+
+function meridianAt(text, uptoIndex, fallback) {
+  const re = new RegExp(MERIDIAN_SRC, "gi");
+  let last = fallback, m;
   while ((m = re.exec(text)) !== null) {
     if (m.index >= uptoIndex) break;
-    last = /Humboldt/i.test(m[1]) ? "Humboldt" : "Mount Diablo";
+    last = normalizeMeridian(m[1]);
   }
   return last;
 }
 
-function parseDescription(text) {
-  const matches = [];
+function parseRing(ringText, fallbackMeridian) {
+  const found = [];
   let m;
+  const cornerRe = new RegExp(CORNER_SRC, "gi");
+  while ((m = cornerRe.exec(ringText)) !== null) found.push({ i: m.index, kind: "corner", m });
+  const gapRe = new RegExp(NONPLSS_SRC, "gi");
+  while ((m = gapRe.exec(ringText)) !== null) found.push({ i: m.index, kind: "gap", m });
+  found.sort((a, b) => a.i - b.i);
 
-  const cornerRe = new RegExp(CORNER_RE.source, "gi");
-  while ((m = cornerRe.exec(text)) !== null) {
-    matches.push({ start: m.index, kind: "corner", match: m });
-  }
-  const nonPlssRe = new RegExp(NON_PLSS_RE.source, "gi");
-  while ((m = nonPlssRe.exec(text)) !== null) {
-    matches.push({ start: m.index, kind: "non_plss", match: m });
-  }
-  matches.sort((a, b) => a.start - b.start);
-
-  const segments = [];
-  for (const { start, kind, match } of matches) {
-    if (kind === "corner") {
-      segments.push({
+  const segs = [];
+  for (const f of found) {
+    if (f.kind === "corner") {
+      segs.push({
         type: "corner",
-        meridian: findMeridian(text, start),
-        corner: CORNER_MAP[match[1].toLowerCase()],
-        twpNo: parseInt(match[2], 10),
-        twpDir: match[3].toUpperCase(),
-        rngNo: parseInt(match[4], 10),
-        rngDir: match[5].toUpperCase(),
+        meridian: meridianAt(ringText, f.i, fallbackMeridian),
+        corner: CORNER_MAP[f.m[1].toLowerCase()],
+        twpNo: +f.m[2], twpDir: f.m[3].toUpperCase(),
+        rngNo: +f.m[4], rngDir: f.m[5].toUpperCase(),
       });
     } else {
-      segments.push({ type: "non_plss", text: match[0] });
+      const prev = segs[segs.length - 1];
+      if (prev && prev.type === "gap" && prev.text.toLowerCase() === f.m[0].toLowerCase()) continue;
+      segs.push({ type: "gap", text: f.m[0] });
     }
   }
-
-  // collapse consecutive duplicate non_plss flags
-  const collapsed = [];
-  for (const seg of segments) {
-    const prev = collapsed[collapsed.length - 1];
-    if (prev && seg.type === "non_plss" && prev.type === "non_plss" &&
-        prev.text.toLowerCase() === seg.text.toLowerCase()) {
-      continue;
-    }
-    collapsed.push(seg);
-  }
-  return collapsed;
+  return segs;
 }
 
+function parseDescription(text) {
+  return splitRings(text).map(r => {
+    const mm = new RegExp(MERIDIAN_SRC, "i").exec(r.text);
+    const fallback = mm ? normalizeMeridian(mm[1]) : "Mount Diablo";
+    return { ...r, segments: parseRing(r.text, fallback) };
+  }).filter(r => r.segments.some(s => s.type === "corner"));
+}
+
+/* ---------------- BLM lookup ---------------- */
+
 async function fetchTownship(seg) {
-  const where = `TWNSHPNO='${String(seg.twpNo).padStart(3, "0")}' AND TWNSHPDIR='${seg.twpDir}' ` +
+  const where =
+    `TWNSHPNO='${String(seg.twpNo).padStart(3, "0")}' AND TWNSHPDIR='${seg.twpDir}' ` +
     `AND RANGENO='${String(seg.rngNo).padStart(3, "0")}' AND RANGEDIR='${seg.rngDir}' ` +
     `AND PRINMER LIKE '${MERIDIAN_LIKE[seg.meridian]}'`;
   const params = new URLSearchParams({
-    where, outFields: "PLSSID,TWNSHPLAB", returnGeometry: "true",
-    outSR: "4326", f: "geojson",
+    where, outFields: "PLSSID,TWNSHPLAB", returnGeometry: "true", f: "geojson",
   });
-  const resp = await fetch(`${FEATURE_SERVER}?${params.toString()}`);
-  if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const resp = await fetch(`${FEATURE_SERVER}?${params}`);
+  if (!resp.ok) throw new Error(`server returned ${resp.status}`);
   const data = await resp.json();
+  if (data.error) throw new Error(data.error.message || "query rejected");
   if (!data.features || !data.features.length) throw new Error("no match");
-  return data.features[0];
+  return { feature: data.features[0], ambiguous: data.features.length > 1 };
 }
 
 function cornerPoint(feature, corner) {
-  let coords = feature.geometry.coordinates[0];
-  if (feature.geometry.type === "MultiPolygon") coords = feature.geometry.coordinates[0][0];
-  const lons = coords.map(c => c[0]), lats = coords.map(c => c[1]);
-  let target;
-  if (corner === "NE") target = [Math.max(...lons), Math.max(...lats)];
-  else if (corner === "NW") target = [Math.min(...lons), Math.max(...lats)];
-  else if (corner === "SE") target = [Math.max(...lons), Math.min(...lats)];
-  else target = [Math.min(...lons), Math.min(...lats)];
-  let best = coords[0], bestDist = Infinity;
-  for (const c of coords) {
-    const d = (c[0] - target[0]) ** 2 + (c[1] - target[1]) ** 2;
-    if (d < bestDist) { bestDist = d; best = c; }
+  let ring = feature.geometry.coordinates[0];
+  if (feature.geometry.type === "MultiPolygon") ring = feature.geometry.coordinates[0][0];
+  const lons = ring.map(c => c[0]), lats = ring.map(c => c[1]);
+  const tgt =
+    corner === "NE" ? [Math.max(...lons), Math.max(...lats)] :
+    corner === "NW" ? [Math.min(...lons), Math.max(...lats)] :
+    corner === "SE" ? [Math.max(...lons), Math.min(...lats)] :
+                      [Math.min(...lons), Math.min(...lats)];
+  let best = ring[0], bd = Infinity;
+  for (const c of ring) {
+    const d = (c[0] - tgt[0]) ** 2 + (c[1] - tgt[1]) ** 2;
+    if (d < bd) { bd = d; best = c; }
   }
   return best;
 }
 
-// ---- UI wiring ----
-let segments = [];
-let map, boundaryLayerGroup;
+/* ---------------- geometry helpers ---------------- */
 
-const descEl = document.getElementById("desc");
-const summaryEl = document.getElementById("summary");
-const cornerListEl = document.getElementById("cornerList");
-const parseBtn = document.getElementById("parseBtn");
-const exampleBtn = document.getElementById("exampleBtn");
-const plotBtn = document.getElementById("plotBtn");
-const progressEl = document.getElementById("progress");
-const downloadBtn = document.getElementById("downloadBtn");
-const emptyState = document.getElementById("emptyState");
-const legend = document.getElementById("legend");
+// ray casting; ring is [[lon,lat],...]
+function pointInRing(pt, ring) {
+  const [x, y] = pt;
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
 
-exampleBtn.addEventListener("click", () => { descEl.value = EXAMPLE_TEXT; });
+function distToSegment(p, a, b) {
+  const dx = b[0] - a[0], dy = b[1] - a[1];
+  if (dx === 0 && dy === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
+  let t = ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy);
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
+}
 
-parseBtn.addEventListener("click", () => {
-  const text = descEl.value.trim();
-  if (!text) return;
-  segments = parseDescription(text);
-  renderCornerList();
-  const cornerCount = segments.filter(s => s.type === "corner").length;
-  const gapCount = segments.filter(s => s.type === "non_plss").length;
-  summaryEl.textContent = `${cornerCount} PLSS corners · ${gapCount} gaps to verify manually`;
-  plotBtn.disabled = segments.length === 0;
+/* ---------------- UI ---------------- */
+
+const el = id => document.getElementById(id);
+const descEl = el("desc"), bannerEl = el("banner"), summaryEl = el("summary"),
+      listEl = el("cornerList"), plotBtn = el("plotBtn"), progressEl = el("progress"),
+      downloadBtn = el("downloadBtn"), emptyState = el("emptyState"),
+      legend = el("legend"), verdictEl = el("verdict"), checkHint = el("checkHint");
+
+let map, shapeLayer, markerLayer;
+let plotted = null; // { outers: [[lon,lat]...], holes: [...], approxEdges: [[a,b],...] }
+
+function showBanner(kind, html) {
+  bannerEl.className = "banner " + kind;
+  bannerEl.innerHTML = html;
+}
+function clearBanner() { bannerEl.className = "banner"; bannerEl.innerHTML = ""; }
+
+el("exampleBtn").addEventListener("click", () => {
+  descEl.value = EXAMPLE_TEXT;
+  clearBanner();
 });
 
-function renderCornerList() {
-  cornerListEl.innerHTML = "";
-  segments.forEach((seg, i) => {
-    const row = document.createElement("div");
-    row.className = "corner-row " + (seg.type === "corner" ? "pending" : "gap");
-    row.dataset.index = i;
-    const desc = document.createElement("span");
-    desc.className = "desc";
-    desc.textContent = seg.type === "corner"
-      ? `${seg.corner}  T${seg.twpNo}${seg.twpDir}  R${seg.rngNo}${seg.rngDir}`
-      : seg.text;
-    const status = document.createElement("span");
-    status.className = "status";
-    status.textContent = seg.type === "corner" ? "—" : "gap";
-    row.appendChild(desc);
-    row.appendChild(status);
-    cornerListEl.appendChild(row);
-  });
-}
+el("pdfBtn").addEventListener("click", () => el("pdfInput").click());
+el("pdfInput").addEventListener("change", async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  showBanner("warn", "Reading PDF…");
+  try {
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    let out = "";
+    for (let p = 1; p <= pdf.numPages; p++) {
+      const page = await pdf.getPage(p);
+      const tc = await page.getTextContent();
+      out += tc.items.map(i => i.str).join(" ") + "\n";
+    }
+    descEl.value = out.replace(/\s+/g, " ").trim();
+    const hits = (out.match(new RegExp(CORNER_SRC, "gi")) || []).length;
+    if (!hits) {
+      showBanner("error",
+        "No township/range corners found in this PDF. If it's a scanned image rather than a text PDF, the text can't be extracted — copy the description in manually instead.");
+    } else {
+      showBanner("warn",
+        `Extracted text from ${pdf.numPages} page(s), containing ${hits} corner references. <b>Check the box above and delete anything that isn't the boundary you want</b> — if the PDF holds more than one area description, they'll all be plotted together.`);
+    }
+  } catch (err) {
+    showBanner("error", `Couldn't read that PDF: ${err.message}`);
+  }
+  e.target.value = "";
+});
 
 function ensureMap() {
   if (map) return;
   emptyState.style.display = "none";
-  map = L.map("map", { zoomControl: true }).setView([37.5, -119.5], 6);
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
-    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
-    maxZoom: 19,
+  map = L.map("map").setView([37.6, -119.6], 6);
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 18,
   }).addTo(map);
-  boundaryLayerGroup = L.layerGroup().addTo(map);
+  shapeLayer = L.layerGroup().addTo(map);
+  markerLayer = L.layerGroup().addTo(map);
   legend.style.display = "block";
+  map.on("click", (e) => checkLocation(e.latlng.lng, e.latlng.lat));
+}
+
+function renderList(rings) {
+  listEl.innerHTML = "";
+  rings.forEach((ring, ri) => {
+    const head = document.createElement("div");
+    head.className = "ring-head";
+    head.textContent = ring.label;
+    listEl.appendChild(head);
+    ring.segments.forEach((seg, si) => {
+      const row = document.createElement("div");
+      row.className = "corner-row " + (seg.type === "corner" ? "" : "gap");
+      row.id = `r${ri}s${si}`;
+      const d = document.createElement("span");
+      d.className = "desc";
+      d.textContent = seg.type === "corner"
+        ? `${seg.corner}  T${seg.twpNo}${seg.twpDir}  R${seg.rngNo}${seg.rngDir}`
+        : seg.text;
+      const s = document.createElement("span");
+      s.className = "status";
+      s.textContent = seg.type === "corner" ? "—" : "gap";
+      row.append(d, s);
+      listEl.appendChild(row);
+    });
+  });
 }
 
 plotBtn.addEventListener("click", async () => {
+  clearBanner();
+  verdictEl.style.display = "none";
+  const text = descEl.value.trim();
+
+  if (!text) {
+    showBanner("error", "Nothing to plot — paste a boundary description, or click \"Load example\".");
+    return;
+  }
+
+  const rings = parseDescription(text);
+  const totalCorners = rings.reduce((n, r) => n + r.segments.filter(s => s.type === "corner").length, 0);
+
+  if (!totalCorners) {
+    showBanner("error",
+      "No township/range corners found. This tool reads phrases like <code>Northwest corner of Township 20S, Range 6E</code>. If your description uses a different format, it won't parse.");
+    summaryEl.textContent = ""; listEl.innerHTML = "";
+    return;
+  }
+
+  renderList(rings);
+  const holeCount = rings.filter(r => r.role === "hole").length;
+  const gapCount = rings.reduce((n, r) => n + r.segments.filter(s => s.type === "gap").length, 0);
+  summaryEl.textContent =
+    `${rings.length - holeCount} area part(s) · ${holeCount} exclusion(s) · ${totalCorners} corners · ${gapCount} approximated edges`;
+
   ensureMap();
-  boundaryLayerGroup.clearLayers();
+  shapeLayer.clearLayers();
+  markerLayer.clearLayers();
   plotBtn.disabled = true;
   progressEl.style.display = "block";
-  progressEl.max = segments.filter(s => s.type === "corner").length;
+  progressEl.max = totalCorners;
   progressEl.value = 0;
 
-  let currentLine = [];
-  const lines = [];
-  const gapPairs = []; // [prevPoint, nextPoint] for dashed connectors
-  let lastPoint = null;
+  const outers = [], holes = [], approxEdges = [];
+  let failures = 0, networkFail = false, ambiguousCount = 0;
 
-  const rows = cornerListEl.querySelectorAll(".corner-row");
+  for (let ri = 0; ri < rings.length; ri++) {
+    const ring = rings[ri];
+    const pts = [];
+    let pendingGap = false;
 
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    const row = rows[i];
-    if (seg.type === "non_plss") {
-      if (currentLine.length) { lines.push(currentLine); currentLine = []; }
-      continue;
+    for (let si = 0; si < ring.segments.length; si++) {
+      const seg = ring.segments[si];
+      const row = el(`r${ri}s${si}`);
+      if (seg.type === "gap") { pendingGap = true; continue; }
+      try {
+        const { feature, ambiguous } = await fetchTownship(seg);
+        const pt = cornerPoint(feature, seg.corner);
+        if (pendingGap && pts.length) { approxEdges.push([pts[pts.length - 1], pt]); pendingGap = false; }
+        pts.push(pt);
+        row.className = "corner-row ok";
+        row.querySelector(".status").textContent = ambiguous ? "ok (dup)" : "ok";
+        if (ambiguous) ambiguousCount++;
+      } catch (err) {
+        failures++;
+        if (err instanceof TypeError) networkFail = true;
+        row.className = "corner-row error";
+        row.querySelector(".status").textContent =
+          err instanceof TypeError ? "blocked" : err.message;
+      }
+      progressEl.value++;
+      await new Promise(r => setTimeout(r, 55));
     }
-    try {
-      const feature = await fetchTownship(seg);
-      const pt = cornerPoint(feature, seg.corner); // [lon, lat]
-      if (!currentLine.length && lastPoint) gapPairs.push([lastPoint, pt]);
-      currentLine.push(pt);
-      lastPoint = pt;
-      row.className = "corner-row ok";
-      row.querySelector(".status").textContent = "ok";
-    } catch (err) {
-      row.className = "corner-row error";
-      row.querySelector(".status").textContent = "not found";
+
+    if (pts.length >= 3) {
+      approxEdges.push([pts[pts.length - 1], pts[0]]); // closing edge
+      (ring.role === "hole" ? holes : outers).push(pts);
     }
-    progressEl.value += 1;
-    await new Promise(r => setTimeout(r, 60)); // gentle pace against the public service
   }
-  if (currentLine.length) lines.push(currentLine);
 
-  const bounds = [];
-  lines.forEach(line => {
-    const latlngs = line.map(([lon, lat]) => [lat, lon]);
-    L.polyline(latlngs, { color: "#D98A2B", weight: 3 }).addTo(boundaryLayerGroup);
-    bounds.push(...latlngs);
-  });
-  gapPairs.forEach(([a, b]) => {
-    L.polyline([[a[1], a[0]], [b[1], b[0]]], {
-      color: "#93A0AC", weight: 2, dashArray: "6 6",
-    }).addTo(boundaryLayerGroup);
-  });
-  if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
-
-  window._lastGeoJSON = {
-    type: "FeatureCollection",
-    features: lines.map(line => ({
-      type: "Feature",
-      properties: { name: "DIR boundary segment (verify gaps manually)" },
-      geometry: { type: "LineString", coordinates: line },
-    })),
-  };
-  downloadBtn.style.display = "inline";
+  progressEl.style.display = "none";
   plotBtn.disabled = false;
+
+  if (networkFail) {
+    showBanner("error",
+      "Couldn't reach BLM's map service from the browser. This is usually a CORS restriction on their server, not a problem with your setup — see README-web.md for the proxy fix.");
+    return;
+  }
+  if (!outers.length) {
+    showBanner("error", "No complete area could be built — every corner lookup failed. Check the description text.");
+    return;
+  }
+
+  // draw: outers with any contained holes punched out
+  outers.forEach(outer => {
+    const myHoles = holes.filter(h => pointInRing(h[0], outer));
+    const latlngs = [outer, ...myHoles].map(r => r.map(([lon, lat]) => [lat, lon]));
+    L.polygon(latlngs, {
+      color: "#D98A2B", weight: 2.5, fillColor: "#D98A2B", fillOpacity: 0.22,
+    }).addTo(shapeLayer);
+  });
+  holes.forEach(h => {
+    L.polygon(h.map(([lon, lat]) => [lat, lon]), {
+      color: "#93A0AC", weight: 1.5, dashArray: "5 4",
+      fillColor: "#93A0AC", fillOpacity: 0.16,
+    }).bindTooltip("Excluded from Area 1").addTo(shapeLayer);
+  });
+  approxEdges.forEach(([a, b]) => {
+    L.polyline([[a[1], a[0]], [b[1], b[0]]], {
+      color: "#5D6B78", weight: 2, dashArray: "6 6",
+    }).addTo(shapeLayer);
+  });
+
+  const all = outers.flat().map(([lon, lat]) => [lat, lon]);
+  map.fitBounds(all, { padding: [30, 30] });
+
+  plotted = { outers, holes, approxEdges };
+  checkHint.style.display = "block";
+  downloadBtn.style.display = "inline";
+
+  const msgs = [];
+  if (failures) msgs.push(`${failures} corner(s) couldn't be found and were skipped.`);
+  if (ambiguousCount) msgs.push(`${ambiguousCount} township(s) returned more than one record; the first was used.`);
+  if (msgs.length) showBanner("warn", msgs.join(" ") + " Review the list above before relying on this.");
+  else showBanner("ok", "Boundary plotted. Click any point on the map to check whether it falls in Area 1 or Area 2.");
 });
 
+function checkLocation(lon, lat) {
+  if (!plotted) return;
+  const inOuter = plotted.outers.some(o => pointInRing([lon, lat], o));
+  const inHole = plotted.holes.some(h => pointInRing([lon, lat], h));
+  const isArea1 = inOuter && !inHole;
+
+  let nearApprox = false;
+  for (const [a, b] of plotted.approxEdges) {
+    if (distToSegment([lon, lat], a, b) < 0.12) { nearApprox = true; break; }
+  }
+
+  markerLayer.clearLayers();
+  L.circleMarker([lat, lon], {
+    radius: 6, color: "#12283F", weight: 2,
+    fillColor: isArea1 ? "#D98A2B" : "#FFFFFF", fillOpacity: 1,
+  }).addTo(markerLayer);
+
+  verdictEl.style.display = "block";
+  verdictEl.style.borderLeftColor = isArea1 ? "#D98A2B" : "#7C93A8";
+  verdictEl.innerHTML =
+    `<strong>${isArea1 ? "Area 1" : "Area 2"}</strong>` +
+    (inHole ? " — inside the excluded portion, so it falls outside Area 1." : "") +
+    `<br><span class="coords">${lat.toFixed(5)}, ${lon.toFixed(5)}</span>` +
+    (nearApprox
+      ? `<br><span style="color:#F0DCB8;">This point sits near an approximated edge (coastline or state border). Verify against the determination text before relying on it.</span>`
+      : "");
+}
+
 downloadBtn.addEventListener("click", () => {
-  if (!window._lastGeoJSON) return;
-  const blob = new Blob([JSON.stringify(window._lastGeoJSON, null, 2)], { type: "application/geo+json" });
+  if (!plotted) return;
+  const close = r => (r.length && (r[0][0] !== r[r.length-1][0] || r[0][1] !== r[r.length-1][1])) ? [...r, r[0]] : r;
+  const features = plotted.outers.map(outer => {
+    const myHoles = plotted.holes.filter(h => pointInRing(h[0], outer));
+    return {
+      type: "Feature",
+      properties: { area: "Area 1", note: "Coastline/state-border edges are straight-line approximations" },
+      geometry: { type: "Polygon", coordinates: [close(outer), ...myHoles.map(close)] },
+    };
+  });
+  const blob = new Blob([JSON.stringify({ type: "FeatureCollection", features }, null, 2)],
+    { type: "application/geo+json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url; a.download = "boundary.geojson";
-  a.click();
+  a.href = url; a.download = "boundary.geojson"; a.click();
   URL.revokeObjectURL(url);
 });
 </script>
