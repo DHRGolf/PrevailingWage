@@ -126,6 +126,13 @@
   .note { font-size: 11px; color: var(--line-dim); line-height: 1.55; }
   hr.sep { border: none; border-top: 1px solid #1E3A57; margin: 2px 0; }
   input[type=file] { display: none; }
+  input[type=text], select {
+    flex: 1; min-width: 0;
+    background: var(--navy-deep); color: var(--line);
+    border: 1px solid #274A6E; border-radius: 2px;
+    padding: 9px 10px; font-family: inherit; font-size: 13px;
+  }
+  select { width: 100%; }
 </style>
 </head>
 <body>
@@ -156,13 +163,30 @@
     <div class="corner-list" id="cornerList"></div>
 
     <hr class="sep">
-    <div class="verdict" id="verdict"></div>
-    <div class="note" id="checkHint" style="display:none;">
-      Click anywhere on the map to check whether a job location falls
-      inside Area 1.
+
+    <div id="lookupBlock" style="display:none;">
+      <label for="addr">Check a job location</label>
+      <div class="row">
+        <input type="text" id="addr" placeholder="Street address, city, or lat, lon">
+        <button class="primary" id="addrBtn" type="button">Check</button>
+      </div>
+      <div class="note" style="margin-top:6px;">
+        Or click anywhere on the map.
+      </div>
     </div>
 
+    <div class="verdict" id="verdict"></div>
+
     <button class="link-btn" id="downloadBtn" style="display:none;">Download boundary.geojson</button>
+
+    <div>
+      <label for="basemap">Basemap</label>
+      <select id="basemap">
+        <option value="usgstopo">USGS topographic</option>
+        <option value="usgsimagery">USGS imagery + topo</option>
+        <option value="osm">OpenStreetMap</option>
+      </select>
+    </div>
 
     <div class="note">
       Corners come from BLM's public California PLSS map service
@@ -199,6 +223,9 @@ const MERIDIAN_LIKE = {
   "San Bernardino": "%Bernardino%",
 };
 const CORNER_MAP = { northeast: "NE", northwest: "NW", southeast: "SE", southwest: "SW" };
+// Well off the California coast — used to close descriptions that start or
+// end "in the Pacific Ocean" without cutting across land.
+const OFFSHORE_LON = -125.8;
 
 const CORNER_SRC = "(Northeast|Northwest|Southeast|Southwest)\\s+corner\\s+of\\s+Township\\s+(\\d+)\\s*([NS])\\s*,?\\s*Range\\s+(\\d+)\\s*([EW])";
 const MERIDIAN_SRC = "(Mount Diablo|Humboldt|San Bernardino)\\s+(?:Base\\s+(?:and\\s+Meridian|Line)|Meridian)";
@@ -286,7 +313,19 @@ function parseDescription(text) {
   return splitRings(text).map(r => {
     const mm = new RegExp(MERIDIAN_SRC, "i").exec(r.text);
     const fallback = mm ? normalizeMeridian(mm[1]) : "Mount Diablo";
-    return { ...r, segments: parseRing(r.text, fallback) };
+    const segments = parseRing(r.text, fallback);
+    // A description that begins and/or ends out in the Pacific is an OPEN
+    // polyline, not a closed loop. Closing it by joining the first and last
+    // township corners would cut a diagonal straight across California and
+    // shade the wrong side. Flag those ends so the closing edge can instead
+    // be run offshore, through the water, where it belongs.
+    const isOcean = s => s && s.type === "gap" && /Pacific Ocean/i.test(s.text);
+    return {
+      ...r,
+      segments,
+      startsInOcean: isOcean(segments[0]),
+      endsInOcean: isOcean(segments[segments.length - 1]),
+    };
   }).filter(r => r.segments.some(s => s.type === "corner"));
 }
 
@@ -352,7 +391,7 @@ const el = id => document.getElementById(id);
 const descEl = el("desc"), bannerEl = el("banner"), summaryEl = el("summary"),
       listEl = el("cornerList"), plotBtn = el("plotBtn"), progressEl = el("progress"),
       downloadBtn = el("downloadBtn"), emptyState = el("emptyState"),
-      legend = el("legend"), verdictEl = el("verdict"), checkHint = el("checkHint");
+      legend = el("legend"), verdictEl = el("verdict");
 
 let map, shapeLayer, markerLayer;
 let plotted = null; // { outers: [[lon,lat]...], holes: [...], approxEdges: [[a,b],...] }
@@ -397,19 +436,46 @@ el("pdfInput").addEventListener("change", async (e) => {
   e.target.value = "";
 });
 
+// All keyless. USGS National Map is the same federal mapping infrastructure
+// the PLSS survey grid comes from, so section lines and terrain line up with
+// the boundary data rather than fighting it.
+const BASEMAPS = {
+  usgstopo: {
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
+    attribution: "USGS The National Map", maxZoom: 16,
+  },
+  usgsimagery: {
+    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}",
+    attribution: "USGS The National Map", maxZoom: 16,
+  },
+  osm: {
+    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution: "&copy; OpenStreetMap contributors", maxZoom: 18,
+  },
+};
+let baseLayer = null;
+
+function setBasemap(key) {
+  if (!map) return;
+  if (baseLayer) map.removeLayer(baseLayer);
+  const b = BASEMAPS[key] || BASEMAPS.usgstopo;
+  baseLayer = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom });
+  baseLayer.addTo(map);
+  baseLayer.bringToBack();
+}
+
 function ensureMap() {
   if (map) return;
   emptyState.style.display = "none";
   map = L.map("map").setView([37.6, -119.6], 6);
-  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: '&copy; OpenStreetMap contributors',
-    maxZoom: 18,
-  }).addTo(map);
+  setBasemap(el("basemap").value);
   shapeLayer = L.layerGroup().addTo(map);
   markerLayer = L.layerGroup().addTo(map);
   legend.style.display = "block";
   map.on("click", (e) => checkLocation(e.latlng.lng, e.latlng.lat));
 }
+
+el("basemap").addEventListener("change", (e) => setBasemap(e.target.value));
 
 function renderList(rings) {
   listEl.innerHTML = "";
@@ -502,8 +568,18 @@ plotBtn.addEventListener("click", async () => {
     }
 
     if (pts.length >= 3) {
-      approxEdges.push([pts[pts.length - 1], pts[0]]); // closing edge
-      (ring.role === "hole" ? holes : outers).push(pts);
+      let ringPts = pts;
+      // Run open (ocean-ended) rings out to sea before closing them, so the
+      // closing edge crosses water instead of slicing through California.
+      if (ring.startsInOcean || ring.endsInOcean) {
+        const head = ring.startsInOcean ? [[OFFSHORE_LON, pts[0][1]]] : [];
+        const tail = ring.endsInOcean ? [[OFFSHORE_LON, pts[pts.length - 1][1]]] : [];
+        ringPts = [...head, ...pts, ...tail];
+        if (head.length) approxEdges.push([head[0], pts[0]]);
+        if (tail.length) approxEdges.push([pts[pts.length - 1], tail[0]]);
+      }
+      approxEdges.push([ringPts[ringPts.length - 1], ringPts[0]]); // closing edge
+      (ring.role === "hole" ? holes : outers).push(ringPts);
     }
   }
 
@@ -544,7 +620,7 @@ plotBtn.addEventListener("click", async () => {
   map.fitBounds(all, { padding: [30, 30] });
 
   plotted = { outers, holes, approxEdges };
-  checkHint.style.display = "block";
+  el("lookupBlock").style.display = "block";
   downloadBtn.style.display = "inline";
 
   const msgs = [];
@@ -554,7 +630,79 @@ plotBtn.addEventListener("click", async () => {
   else showBanner("ok", "Boundary plotted. Click any point on the map to check whether it falls in Area 1 or Area 2.");
 });
 
-function checkLocation(lon, lat) {
+/* ---------------- address lookup ---------------- */
+
+// Accept a raw "lat, lon" pair without calling out to a geocoder.
+function parseLatLon(s) {
+  const m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
+  if (!m) return null;
+  const a = +m[1], b = +m[2];
+  if (Math.abs(a) > 90 || Math.abs(b) > 180) return null;
+  return { lat: a, lon: b, label: `${a}, ${b}` };
+}
+
+// U.S. Census Bureau geocoder: free, keyless, federal, US-only — same class
+// of public infrastructure as the BLM survey data, so no account to manage.
+async function geocodeCensus(address) {
+  const p = new URLSearchParams({
+    address, benchmark: "Public_AR_Current", format: "json",
+  });
+  const r = await fetch(`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?${p}`);
+  if (!r.ok) throw new Error(`census ${r.status}`);
+  const d = await r.json();
+  const hit = d.result && d.result.addressMatches && d.result.addressMatches[0];
+  if (!hit) return null;
+  return { lat: hit.coordinates.y, lon: hit.coordinates.x, label: hit.matchedAddress };
+}
+
+// Fallback for place names and partial addresses the Census matcher rejects.
+async function geocodeNominatim(address) {
+  const p = new URLSearchParams({
+    q: address, format: "json", countrycodes: "us", limit: "1",
+  });
+  const r = await fetch(`https://nominatim.openstreetmap.org/search?${p}`);
+  if (!r.ok) throw new Error(`nominatim ${r.status}`);
+  const d = await r.json();
+  if (!d.length) return null;
+  return { lat: +d[0].lat, lon: +d[0].lon, label: d[0].display_name };
+}
+
+async function lookupAddress() {
+  const raw = el("addr").value.trim();
+  if (!raw) return;
+  if (!plotted) {
+    showBanner("error", "Plot a boundary first, then check a location against it.");
+    return;
+  }
+
+  const direct = parseLatLon(raw);
+  if (direct) { checkLocation(direct.lon, direct.lat, direct.label); return; }
+
+  const btn = el("addrBtn");
+  btn.disabled = true; btn.textContent = "…";
+  try {
+    let hit = null;
+    try { hit = await geocodeCensus(raw); } catch (e) { /* try fallback */ }
+    if (!hit) hit = await geocodeNominatim(raw);
+    if (!hit) {
+      showBanner("error",
+        "Couldn't find that address. Try adding the city and state, or paste coordinates as <code>lat, lon</code>.");
+    } else {
+      clearBanner();
+      checkLocation(hit.lon, hit.lat, hit.label);
+      map.setView([hit.lat, hit.lon], 10);
+    }
+  } catch (err) {
+    showBanner("error", `Address lookup failed: ${err.message}. You can paste coordinates as <code>lat, lon</code> instead.`);
+  } finally {
+    btn.disabled = false; btn.textContent = "Check";
+  }
+}
+
+el("addrBtn").addEventListener("click", lookupAddress);
+el("addr").addEventListener("keydown", (e) => { if (e.key === "Enter") lookupAddress(); });
+
+function checkLocation(lon, lat, label) {
   if (!plotted) return;
   const inOuter = plotted.outers.some(o => pointInRing([lon, lat], o));
   const inHole = plotted.holes.some(h => pointInRing([lon, lat], h));
@@ -576,6 +724,7 @@ function checkLocation(lon, lat) {
   verdictEl.innerHTML =
     `<strong>${isArea1 ? "Area 1" : "Area 2"}</strong>` +
     (inHole ? " — inside the excluded portion, so it falls outside Area 1." : "") +
+    (label ? `<br>${label.replace(/[<>]/g, "")}` : "") +
     `<br><span class="coords">${lat.toFixed(5)}, ${lon.toFixed(5)}</span>` +
     (nearApprox
       ? `<br><span style="color:#F0DCB8;">This point sits near an approximated edge (coastline or state border). Verify against the determination text before relying on it.</span>`
