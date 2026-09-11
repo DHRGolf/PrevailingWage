@@ -237,7 +237,7 @@
 </div>
 
 <script>
-var VERSION = "v1.3";
+var VERSION = "v1.4";
 document.getElementById("verTag").textContent = VERSION;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -408,25 +408,42 @@ function lonIdx(rngNo, rngDir, which) {
   if (rngDir === "E") return which === "E" ? rngNo : rngNo - 1;
   return which === "E" ? -(rngNo - 1) : -rngNo;
 }
-function storeLines(seg, bbox, vertexCount) {
-  // Coastal townships are clipped to the shoreline, so their extent is not
-  // the survey grid. Only learn edges from clean rectangular records.
-  if (vertexCount > 20) return;
-  var s = lineStore[seg.meridian] || (lineStore[seg.meridian] = { lat: {}, lon: {} });
+// How completely the township fills its own bounding box. A regular interior
+// township is ~1.0 however many vertices BLM densified its edges with; a
+// coastal township clipped to the shoreline is well under that.
+function rectangularity(ring, bbox) {
+  var a = 0;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    a += (ring[j][0] * ring[i][1]) - (ring[i][0] * ring[j][1]);
+  }
+  var boxArea = (bbox.maxLon - bbox.minLon) * (bbox.maxLat - bbox.minLat);
+  if (boxArea <= 0) return 0;
+  return Math.abs(a / 2) / boxArea;
+}
+
+function storeLines(seg, bbox, ring) {
+  var tier = rectangularity(ring, bbox) >= 0.97 ? "clean" : "loose";
+  var byMer = lineStore[seg.meridian] ||
+    (lineStore[seg.meridian] = { clean: { lat: {}, lon: {} }, loose: { lat: {}, lon: {} } });
+  var s = byMer[tier];
   s.lat[latIdx(seg.twpNo, seg.twpDir, "S")] = bbox.minLat;
   s.lat[latIdx(seg.twpNo, seg.twpDir, "N")] = bbox.maxLat;
   s.lon[lonIdx(seg.rngNo, seg.rngDir, "W")] = bbox.minLon;
   s.lon[lonIdx(seg.rngNo, seg.rngDir, "E")] = bbox.maxLon;
 }
+
 function deriveCorner(seg) {
-  var s = lineStore[seg.meridian];
-  if (!s) return null;
+  var byMer = lineStore[seg.meridian];
+  if (!byMer) return null;
   var wantLat = seg.corner.charAt(0) === "N" ? "N" : "S";
   var wantLon = seg.corner.charAt(1) === "E" ? "E" : "W";
-  var lat = s.lat[latIdx(seg.twpNo, seg.twpDir, wantLat)];
-  var lon = s.lon[lonIdx(seg.rngNo, seg.rngDir, wantLon)];
+  var li = latIdx(seg.twpNo, seg.twpDir, wantLat);
+  var oi = lonIdx(seg.rngNo, seg.rngDir, wantLon);
+  var lat = byMer.clean.lat[li], lon = byMer.clean.lon[oi], exact = true;
+  if (typeof lat !== "number") { lat = byMer.loose.lat[li]; exact = false; }
+  if (typeof lon !== "number") { lon = byMer.loose.lon[oi]; exact = false; }
   if (typeof lat !== "number" || typeof lon !== "number") return null;
-  return [lon, lat];
+  return { pt: [lon, lat], exact: exact };
 }
 
 /* ---------------- BLM lookup ---------------- */
@@ -715,7 +732,7 @@ plotBtn.addEventListener("click", async function () {
       try {
         var res = await fetchTownship(seg);
         var coords = outerCoords(res.feature);
-        storeLines(seg, bboxOf(coords), coords.length);
+        storeLines(seg, bboxOf(coords), coords);
         seg.pt = cornerPoint(coords, seg.corner);
         seg.status = res.ambiguous ? "ok (dup)" : "ok";
         if (res.ambiguous) ambiguousCount++;
@@ -743,26 +760,23 @@ plotBtn.addEventListener("click", async function () {
   }
 
   // Pass 2 - rebuild misses from neighbouring townships' shared grid lines.
-  var derived = 0, unresolved = 0;
+  var derived = 0, approxDerived = 0, unresolved = 0, unresolvedNames = [];
   for (var p = 0; p < pending.length; p++) {
-    var d = deriveCorner(pending[p].seg);
+    var ps = pending[p].seg;
+    var d = deriveCorner(ps);
     if (d) {
-      pending[p].seg.pt = d;
-      pending[p].seg.status = "derived";
+      ps.pt = d.pt;
+      ps.status = d.exact ? "derived" : "derived~";
       pending[p].row.className = "corner-row derived";
-      derived++;
+      if (d.exact) derived++; else approxDerived++;
     } else {
+      ps.pt = null;
+      ps.status = "unresolved";
+      pending[p].row.className = "corner-row error";
       unresolved++;
+      unresolvedNames.push(ps.corner + " T" + ps.twpNo + ps.twpDir + " R" + ps.rngNo + ps.rngDir);
     }
-    pending[p].row.querySelector(".status").textContent = pending[p].seg.status;
-  }
-
-  if (unresolved) {
-    showBanner("error",
-      "<b>" + unresolved + " corner(s) could not be resolved</b>, and neither BLM nor the surrounding " +
-      "townships can supply them. The boundary would be drawn with a shortcut across the gap, so no " +
-      "verdict is offered. Check the flagged rows above.");
-    return;
+    pending[p].row.querySelector(".status").textContent = ps.status;
   }
 
   // Build rings.
@@ -770,7 +784,7 @@ plotBtn.addEventListener("click", async function () {
 
   for (var q = 0; q < rings.length; q++) {
     var ring = rings[q];
-    var pts = [], gapQueue = [];
+    var pts = [], gapQueue = [], shortcut = false;
     var segs = ring.segments;
 
     for (var si2 = 0; si2 < segs.length; si2++) {
@@ -778,6 +792,13 @@ plotBtn.addEventListener("click", async function () {
       if (s2.type === "gap") {
         if (/State Border/i.test(s2.text)) gapQueue.push(si2);
         continue;
+      }
+      // A corner neither BLM nor its neighbours could supply. Carry on with a
+      // straight shortcut, but register it so the verdict flags anything near it.
+      if (!s2.pt) { shortcut = true; continue; }
+      if (shortcut && pts.length) {
+        approxEdges.push([pts[pts.length - 1], s2.pt]);
+        shortcut = false;
       }
       if (gapQueue.length && pts.length) {
         // Walk the real state line between the flanking corners.
@@ -848,11 +869,17 @@ plotBtn.addEventListener("click", async function () {
   el("lookupBlock").style.display = "block";
   downloadBtn.style.display = "inline";
 
-  var msgs = [];
-  if (derived) msgs.push(derived + " corner(s) were not in BLM's data and were reconstructed from the adjoining townships' shared section lines.");
+  var msgs = [], kind = "warn";
+  if (derived) msgs.push(derived + " corner(s) were not in BLM's data (usually unsurveyed land) and were rebuilt exactly from the adjoining townships' shared section lines.");
+  if (approxDerived) msgs.push(approxDerived + " corner(s) were rebuilt from townships whose records are clipped to the coastline, so those points are approximate.");
+  if (unresolved) {
+    kind = "error";
+    msgs.push("<b>" + unresolved + " corner(s) could not be resolved at all (" + unresolvedNames.join(", ") +
+      ").</b> The boundary is drawn with a straight shortcut across the gap and that shortcut is marked as an approximate edge, so any location near it will be flagged. Everything away from it is unaffected.");
+  }
   if (ambiguousCount) msgs.push(ambiguousCount + " township(s) returned more than one record; the first was used.");
   if (strayHoles) msgs.push("<b>" + strayHoles + " excluded area is not fully inside Area 1</b> and was left out of the shading \u2014 review it before relying on this.");
-  if (msgs.length) showBanner("warn", msgs.join(" "));
+  if (msgs.length) showBanner(kind, msgs.join(" "));
   else showBanner("ok", "Boundary plotted. Enter an address, or click any point on the map.");
 });
 
