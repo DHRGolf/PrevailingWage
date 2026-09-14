@@ -8,94 +8,45 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/polygon-clipping@0.15.7/dist/polygon-clipping.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
   :root {
-    --navy: #12283F;
-    --navy-deep: #0B1B2C;
-    --line: #DCE6EE;
-    --line-dim: #7C93A8;
+    --navy: #12283F; --navy-deep: #0B1B2C;
+    --line: #DCE6EE; --line-dim: #7C93A8;
     --paper: #F4F0E4;
-    --amber: #D98A2B;
-    --amber-dim: #8A5D22;
-    --gap-gray: #93A0AC;
-    --ok: #7FB07A;
-    --err: #E0714A;
+    --amber: #D98A2B; --amber-dim: #8A5D22;
+    --gap-gray: #93A0AC; --ok: #7FB07A; --err: #E0714A;
   }
   * { box-sizing: border-box; }
-  html, body {
-    margin: 0; height: 100%;
-    background: var(--navy);
-    color: var(--line);
-    font-family: 'IBM Plex Sans', sans-serif;
-  }
-  header {
-    background: var(--navy-deep);
-    padding: 14px 20px;
-    display: flex; align-items: baseline; gap: 10px;
-    border-bottom: 1px solid #1E3A57;
-  }
+  html, body { margin: 0; height: 100%; background: var(--navy); color: var(--line); font-family: 'IBM Plex Sans', sans-serif; }
+  header { background: var(--navy-deep); padding: 14px 20px; display: flex; align-items: baseline; gap: 12px; border-bottom: 1px solid #1E3A57; }
   header .org { font-size: 13px; letter-spacing: 0.04em; color: var(--line-dim); }
   header h1 { font-size: 16px; font-weight: 600; margin: 0; }
-  header .ver {
-    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
-    color: var(--amber); letter-spacing: 0.04em;
-  }
+  header .ver { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--amber); letter-spacing: 0.04em; }
+  header .src { margin-left: auto; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line-dim); }
   .layout { display: flex; height: calc(100% - 49px); }
-  aside {
-    width: 400px; flex-shrink: 0;
-    border-right: 1px solid #1E3A57;
-    padding: 18px; overflow-y: auto;
-    display: flex; flex-direction: column; gap: 14px;
-  }
+  aside { width: 400px; flex-shrink: 0; border-right: 1px solid #1E3A57; padding: 18px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
   label { display: block; font-size: 12px; color: var(--line-dim); margin-bottom: 6px; }
-  textarea {
-    width: 100%; min-height: 130px;
-    background: var(--navy-deep); color: var(--line);
-    border: 1px solid #274A6E; border-radius: 2px; padding: 10px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
-    line-height: 1.5; resize: vertical;
-  }
-  textarea:focus, button:focus, .link-btn:focus, input:focus {
-    outline: 2px solid var(--amber); outline-offset: 1px;
-  }
+  textarea { width: 100%; min-height: 130px; background: var(--navy-deep); color: var(--line); border: 1px solid #274A6E; border-radius: 2px; padding: 10px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; line-height: 1.5; resize: vertical; }
+  textarea:focus, button:focus, .link-btn:focus, input:focus, select:focus { outline: 2px solid var(--amber); outline-offset: 1px; }
   .row { display: flex; gap: 8px; align-items: center; }
-  button {
-    font-family: inherit; font-size: 13px; font-weight: 500;
-    padding: 9px 14px; border-radius: 2px;
-    border: 1px solid transparent; cursor: pointer;
-  }
+  button { font-family: inherit; font-size: 13px; font-weight: 500; padding: 9px 14px; border-radius: 2px; border: 1px solid transparent; cursor: pointer; }
   button.primary { background: var(--amber); color: var(--navy-deep); }
   button.primary:disabled { background: var(--amber-dim); color: #C9B99A; cursor: not-allowed; }
   button.secondary { background: transparent; border-color: #33587D; color: var(--line); }
-  .link-btn {
-    background: none; border: none; color: var(--line-dim);
-    text-decoration: underline; font-size: 12px; cursor: pointer;
-    padding: 0; text-align: left;
-  }
-  .banner {
-    padding: 10px 12px; border-radius: 2px; font-size: 12.5px;
-    line-height: 1.5; display: none; border-left: 3px solid;
-  }
+  .link-btn { background: none; border: none; color: var(--line-dim); text-decoration: underline; font-size: 12px; cursor: pointer; padding: 0; text-align: left; }
+  .banner { padding: 10px 12px; border-radius: 2px; font-size: 12.5px; line-height: 1.5; display: none; border-left: 3px solid; }
   .banner.error { background: #33170F; border-color: var(--err); color: #F3C7B6; display: block; }
   .banner.warn  { background: #33280F; border-color: var(--amber); color: #F0DCB8; display: block; }
   .banner.ok    { background: #14291A; border-color: var(--ok); color: #C4DFC1; display: block; }
   .banner code { font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; }
+  .banner ul { margin: 6px 0 0 0; padding-left: 18px; }
+  .banner li { margin: 3px 0; }
   .summary { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: var(--line-dim); }
-  .corner-list {
-    flex: 1; min-height: 100px; max-height: 300px; overflow-y: auto;
-    border: 1px solid #1E3A57; background: var(--navy-deep);
-  }
-  .ring-head {
-    padding: 6px 10px; font-size: 11px; color: var(--line-dim);
-    background: #0E2136; border-bottom: 1px solid #17324C;
-    position: sticky; top: 0;
-  }
-  .corner-row {
-    display: flex; justify-content: space-between; padding: 5px 10px;
-    font-family: 'IBM Plex Mono', monospace; font-size: 11.5px;
-    border-bottom: 1px solid #17324C;
-  }
+  .corner-list { flex: 1; min-height: 100px; max-height: 300px; overflow-y: auto; border: 1px solid #1E3A57; background: var(--navy-deep); }
+  .ring-head { padding: 6px 10px; font-size: 11px; color: var(--line-dim); background: #0E2136; border-bottom: 1px solid #17324C; position: sticky; top: 0; }
+  .corner-row { display: flex; justify-content: space-between; padding: 5px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; border-bottom: 1px solid #17324C; }
   .corner-row .status { color: var(--line-dim); }
   .corner-row.gap .desc { color: var(--gap-gray); font-style: italic; }
   .corner-row.ok .status { color: var(--ok); }
@@ -104,50 +55,20 @@
   progress { width: 100%; height: 6px; accent-color: var(--amber); }
   main { flex: 1; position: relative; background: var(--paper); }
   #map { width: 100%; height: 100%; }
-  .empty-state {
-    position: absolute; inset: 0; display: flex;
-    align-items: center; justify-content: center;
-    color: #8C8672; font-size: 13px; text-align: center; padding: 40px;
-  }
+  .empty-state { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #8C8672; font-size: 13px; text-align: center; padding: 40px; }
   .empty-state div { max-width: 320px; line-height: 1.6; }
-  .legend {
-    position: absolute; bottom: 16px; left: 16px;
-    background: rgba(18,40,63,0.94); color: var(--line);
-    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
-    padding: 10px 12px; border-radius: 2px; z-index: 500; display: none;
-  }
+  .legend { position: absolute; bottom: 16px; left: 16px; background: rgba(18,40,63,0.94); color: var(--line); font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 10px 12px; border-radius: 2px; z-index: 500; display: none; }
   .legend div { margin: 4px 0; }
-  .legend .box {
-    display: inline-block; width: 16px; height: 10px;
-    margin-right: 7px; vertical-align: middle; border: 1px solid;
-  }
-  .verdict {
-    padding: 12px; border-radius: 2px; font-size: 13px;
-    line-height: 1.5; display: none; border-left: 4px solid var(--amber);
-    background: var(--navy-deep);
-  }
-  .verdict .big {
-    font-size: 20px; font-weight: 600; letter-spacing: 0.02em;
-    display: block; margin-bottom: 4px;
-  }
+  .legend .box { display: inline-block; width: 16px; height: 10px; margin-right: 7px; vertical-align: middle; border: 1px solid; }
+  .verdict { padding: 12px; border-radius: 2px; font-size: 13px; line-height: 1.5; display: none; border-left: 4px solid var(--amber); background: var(--navy-deep); }
+  .verdict .big { font-size: 20px; font-weight: 600; letter-spacing: 0.02em; display: block; margin-bottom: 4px; }
   .verdict .coords { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--line-dim); }
-  .verdict .caution {
-    margin-top: 10px; padding: 9px 10px; border-radius: 2px;
-    background: #4A2410; border: 1px solid var(--err); color: #FFD9C8;
-    font-size: 12.5px; font-weight: 500; line-height: 1.45;
-  }
+  .verdict .caution { margin-top: 10px; padding: 9px 10px; border-radius: 2px; background: #4A2410; border: 1px solid var(--err); color: #FFD9C8; font-size: 12.5px; font-weight: 500; line-height: 1.45; }
+  .verdict .near { margin-top: 10px; padding: 8px 10px; border-radius: 2px; background: #33280F; border: 1px solid var(--amber); color: #F0DCB8; font-size: 12px; line-height: 1.45; }
   .note { font-size: 11px; color: var(--line-dim); line-height: 1.55; }
   hr.sep { border: none; border-top: 1px solid #1E3A57; margin: 2px 0; }
-  input[type=file] {
-    display: block; width: 100%; font-family: inherit; font-size: 12px;
-    color: var(--line-dim); padding: 6px 0;
-  }
-  input[type=text], select {
-    flex: 1; min-width: 0;
-    background: var(--navy-deep); color: var(--line);
-    border: 1px solid #274A6E; border-radius: 2px;
-    padding: 9px 10px; font-family: inherit; font-size: 13px;
-  }
+  input[type=file] { display: block; width: 100%; font-family: inherit; font-size: 12px; color: var(--line-dim); padding: 6px 0; }
+  input[type=text], select { flex: 1; min-width: 0; background: var(--navy-deep); color: var(--line); border: 1px solid #274A6E; border-radius: 2px; padding: 9px 10px; font-family: inherit; font-size: 13px; }
   select { width: 100%; }
 </style>
 </head>
@@ -157,7 +78,7 @@
   <span class="org">DHR GOLF</span>
   <h1>Boundary Plotter</h1>
   <span class="ver" id="verTag"></span>
-  <span style="margin-left:auto;"></span>
+  <span class="src" id="srcTag"></span>
 </header>
 
 <div class="layout">
@@ -166,40 +87,29 @@
       <label for="desc">DIR area boundary description</label>
       <textarea id="desc" placeholder="Paste the metes-and-bounds text from a DIR determination, or load a PDF below."></textarea>
     </div>
-
     <div>
       <label for="pdfInput">Or load the text from a PDF</label>
       <input type="file" id="pdfInput" accept="application/pdf">
     </div>
-
     <div class="row">
       <button class="secondary" id="exampleBtn" type="button">Load example</button>
     </div>
-
     <button class="primary" id="plotBtn" type="button">Plot boundary</button>
     <progress id="progress" value="0" max="1" style="display:none;"></progress>
-
     <div class="banner" id="banner"></div>
     <div class="summary" id="summary"></div>
     <div class="corner-list" id="cornerList"></div>
-
     <hr class="sep">
-
     <div id="lookupBlock" style="display:none;">
       <label for="addr">Check a job location</label>
       <div class="row">
         <input type="text" id="addr" placeholder="Street address, city, or lat, lon">
         <button class="primary" id="addrBtn" type="button">Check</button>
       </div>
-      <div class="note" style="margin-top:6px;">
-        Or click anywhere on the map.
-      </div>
+      <div class="note" style="margin-top:6px;">Or click anywhere on the map.</div>
     </div>
-
     <div class="verdict" id="verdict"></div>
-
     <button class="link-btn" id="downloadBtn" style="display:none;">Download boundary.geojson</button>
-
     <div>
       <label for="basemap">Basemap</label>
       <select id="basemap">
@@ -208,13 +118,13 @@
         <option value="osm">OpenStreetMap</option>
       </select>
     </div>
-
     <div class="note">
       Township corners come from BLM's public California PLSS map service
-      (gis.blm.gov) — federal data, no login or key. Legs that follow the
-      Oregon or Nevada state line are drawn on the surveyed state boundary.
-      Legs that run into the Pacific are closed offshore and are drawn
-      dashed; results near those legs are flagged.
+      (gis.blm.gov). State-line legs follow the surveyed Oregon and Nevada
+      boundaries. Legs that run into the Pacific are closed offshore, then
+      the whole boundary is clipped to California's coastline from the
+      Census Bureau's state outline. All sources are federal, free, and
+      need no login or key.
       <br><br>
       This tool is a screening aid. It does not replace a written
       classification from the DIR.
@@ -224,186 +134,267 @@
   <main>
     <div id="map"></div>
     <div class="empty-state" id="emptyState">
-      <div>Paste a boundary description, or click "Load example" then
-      "Plot boundary" to see it work on the Operating Engineer Area 1
-      description.</div>
+      <div>Paste a boundary description, or click "Load example" then "Plot boundary" to see it work on the Operating Engineer Area 1 description.</div>
     </div>
     <div class="legend" id="legend">
-      <div><span class="box" style="background:rgba(217,138,43,0.35); border-color:#D98A2B;"></span>Area 1 — inside described boundary</div>
-      <div><span class="box" style="background:rgba(120,135,150,0.30); border-color:#6B7B8A;"></span>Area 2 — California outside Area 1</div>
-      <div><span class="box" style="background:rgba(224,113,74,0.30); border-color:#E0714A;"></span>Excluded from Area 1 (counts as Area 2)</div>
-      <div><span class="box" style="background:transparent; border-color:#5D6B78; border-style:dashed;"></span>Offshore closing edge — approximate</div>
+      <div><span class="box" style="background:rgba(217,138,43,0.42); border-color:#D98A2B;"></span>Area 1 — inside described boundary</div>
+      <div><span class="box" style="background:rgba(80,110,140,0.32); border-color:#3F5E7C;"></span>Area 2 — California outside Area 1</div>
+      <div><span class="box" style="background:rgba(224,113,74,0.35); border-color:#E0714A;"></span>Excluded from Area 1 (counts as Area 2)</div>
+      <div><span class="box" style="background:transparent; border-color:#3C4A57; border-style:dashed;"></span>Approximate edge — flagged in verdicts</div>
     </div>
   </main>
 </div>
 
 <script>
-var VERSION = "v1.5";
+var VERSION = "v2.0";
 document.getElementById("verTag").textContent = VERSION;
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+if (typeof pdfjsLib !== "undefined") {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+/* =====================================================================
+   Constants
+   ===================================================================== */
 
 var FEATURE_SERVER = "https://gis.blm.gov/caarcgis/rest/services/lands/BLM_CA_CADNSDI/FeatureServer/1/query";
-var MERIDIAN_LIKE = {
-  "Mount Diablo": "%Diablo%",
-  "Humboldt": "%Humboldt%",
-  "San Bernardino": "%Bernardino%"
+var MERIDIAN_LIKE = { "Mount Diablo": "%Diablo%", "Humboldt": "%Humboldt%", "San Bernardino": "%Bernardino%" };
+
+// California state outline, tried in order. Detailed first.
+var CA_SOURCES = [
+  { name: "Census TIGERweb", url: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/State_County/MapServer/0/query?where=NAME%3D%27California%27&outFields=NAME&returnGeometry=true&outSR=4326&f=geojson" },
+  { name: "Census TIGERweb", url: "https://tigerweb.geo.census.gov/arcgis/rest/services/TIGERweb/tigerWMS_Current/MapServer/84/query?where=NAME%3D%27California%27&outFields=NAME&returnGeometry=true&outSR=4326&f=geojson" },
+  { name: "Esri Living Atlas (generalized)", url: "https://services.arcgis.com/P3ePLMYs2RVChkJx/arcgis/rest/services/USA_States_Generalized/FeatureServer/0/query?where=STATE_NAME%3D%27California%27&outFields=STATE_NAME&returnGeometry=true&outSR=4326&f=geojson" }
+];
+
+// Straight statutory state-line legs. Arizona (Colorado River) is not straight
+// and is not modelled; a description that names it gets a flagged chord.
+var BORDERS = {
+  Oregon: { pts: [[-124.21, 42.0], [-120.0, 42.0]], exact: true },
+  Nevada: { pts: [[-120.0, 42.0], [-120.0, 39.0], [-114.633, 35.002]], exact: true },
+  Mexico: { pts: [[-117.125, 32.534], [-114.72, 32.72]], exact: false },
+  Arizona: null
 };
-var CORNER_MAP = { northeast: "NE", northwest: "NW", southeast: "SE", southwest: "SW" };
 
-// Offshore box used only when two ocean legs run parallel and never meet.
-var LON_OFF = -126.0, LAT_S_OFF = 34.6, LAT_N_OFF = 42.6;
+// Coarse California outline. Used ONLY to sanity-check that legs described as
+// running into the ocean actually leave the state, when the detailed outline
+// has not loaded. Never drawn, never used for a verdict.
+var CA_COARSE = [[[[-124.21,42.0],[-120.0,42.0],[-120.0,39.0],[-114.633,35.002],[-114.63,34.87],[-114.72,32.72],[-117.125,32.534],[-117.3,33.1],[-118.5,34.03],[-119.2,34.15],[-120.65,34.6],[-120.9,35.45],[-121.9,36.3],[-121.95,36.98],[-122.5,37.5],[-122.52,37.8],[-123.0,38.0],[-123.1,38.35],[-123.7,38.95],[-123.85,39.85],[-124.4,40.45],[-124.2,41.0],[-124.25,41.9],[-124.21,42.0]]]];
 
-// California's surveyed north and east boundaries. Both are straight legs,
-// so they can be stated exactly without a coastline dataset:
-//   42 deg N from the coast to the Oregon corner,
-//   120 deg W south to the Lake Tahoe corner,
-//   then the oblique to the Colorado River.
-var CA_BORDER = [[-124.21, 42.0], [-120.0, 42.0], [-120.0, 39.0], [-114.633, 35.002]];
+// Offshore box used only when two ocean legs run parallel and never meet, or
+// when the state outline is unavailable.
+var BOX = { w: -126.0, e: -113.5, s: 32.0, n: 42.6 };
 
-var CORNER_SRC = "(Northeast|Northwest|Southeast|Southwest)\\s+corner\\s+of\\s+Township\\s+(\\d+)\\s*([NS])\\s*,?\\s*Range\\s+(\\d+)\\s*([EW])";
-var MERIDIAN_SRC = "(Mount Diablo|Humboldt|San Bernardino)\\s+(?:Base\\s+(?:and\\s+Meridian|Line)|Meridian)";
-var NONPLSS_SRC = "(California\\s*/\\s*Nevada State Border|California\\s*/\\s*Oregon State Border|Pacific Ocean)";
-var EXCLUDE_SRC = "(excluding|less and except|save and except|excepting)";
-var DIR_SRC = "(North|South|East|West)erly";
-// Travel bearings always follow "Thence". Bearings that merely describe a line
-// ("on the extension of the Southerly line of Township 19S") must not be read
-// as direction of travel.
-var THENCE_DIR_SRC = "Thence\\s+" + DIR_SRC;
+/* Vocabulary. Written to survive spelling variants and abbreviations. */
+var CORNER_SRC =
+  "\\b(north\\s*east|north\\s*west|south\\s*east|south\\s*west|N\\.?\\s*E\\.?|N\\.?\\s*W\\.?|S\\.?\\s*E\\.?|S\\.?\\s*W\\.?)" +
+  "\\s+corner\\s+of\\s+(?:the\\s+)?(?:Township|Twp\\.?|Tp\\.?|T\\.?)\\s*(\\d+)\\s*-?\\s*(North|South|N|S)\\b\\.?,?\\s*(?:of\\s+)?" +
+  "(?:Range|Rge\\.?|Rng\\.?|R\\.?)\\s*(\\d+)\\s*-?\\s*(East|West|E|W)\\b";
+
+var MERIDIAN_SRC =
+  "\\b(Mount\\s+Diablo|Mt\\.?\\s+Diablo|M\\.?\\s?D\\.?\\s?B\\.?\\s?&?\\s?M\\.?|MDM|" +
+  "Humboldt|H\\.?\\s?B\\.?\\s?&?\\s?M\\.?|" +
+  "San\\s+Bernardino|S\\.?\\s?B\\.?\\s?B\\.?\\s?&?\\s?M\\.?|SBM)\\b";
+
+var OCEAN_SRC = "\\b(Pacific(?:\\s+Ocean)?|the\\s+ocean|coast\\s*line|shore\\s*line|the\\s+coast)\\b";
+
+var BORDER_SRC =
+  "\\b(?:California\\s*(?:[/\\-\\u2013\\u2014]|and)?\\s*)?(Nevada|Oregon|Arizona|Mexico|Mexican)\\s*(?:State\\s*)?(?:Border|Line|Boundary)|" +
+  "\\bState\\s+of\\s+(Nevada|Oregon|Arizona)\\b|\\b(Colorado\\s+River)\\b";
+
+var START_SRC = "\\b(Commencing|Beginning|Starting)\\b";
+var EXCLUDE_SRC = "\\b(excluding|excepting|except|less\\s+and\\s+except|save\\s+and\\s+except|exclusive\\s+of|not\\s+including)\\b";
+var POB_SRC = "\\b(?:point|place)\\s+of\\s+(?:beginning|commencement)\\b";
+
+// A compass word is a travel bearing unless it is modifying a noun
+// ("Southerly line", "Northern boundary", "Westerly side"). That grammatical
+// test is what makes the parser indifferent to whether "Thence" is present,
+// misspelled, or replaced by "then" / "running" / nothing at all.
+var BEARING_SRC =
+  "\\b(?:(north|south|east|west)(?:erly|ward(?:ly)?)|(north|south|east|west)(?=\\s+(?:to|along|into|on|from|and|a\\s+distance|\\d|,)))\\b" +
+  "(?!\\s*(?:east|west|line|lines|boundary|boundaries|corner|corners|side|edge|half|quarter|bank|shore|limit|limits|border|extension))";
 
 var EXAMPLE_TEXT = "Commencing in the Pacific Ocean on the extension of the Southerly line of Township 19S, of the Mount Diablo Base and Meridian, Thence Easterly along the Southerly line of Township 19S, to the Northwest corner of Township 20S, Range 6E, Thence Southerly to the Southwest corner of Township 20S, Range 6E, Thence Easterly to the Northwest corner of Township 21S, Range 7E, Thence Southerly to the Southwest corner of Township 21S, Range 7E, Thence Easterly to the Northwest corner of Township 22S, Range 9E, Thence Southerly to the Southwest corner of Township 22S, Range 9E, Thence Easterly to the Northwest corner of Township 23S, Range 10E, Thence Southerly to the Southwest corner of Township 24S, Range 10E, Thence Easterly to the Southwest corner of Township 24S, Range 31E, Thence Northerly to the Northeast corner of Township 20S, Range 31E, Thence Westerly to the Southeast corner of Township 19S, Range 29E, Thence Northerly to the Northeast corner of Township 17S, Range 29E, Thence Westerly to the Southeast corner of Township 16S, Range 28E, Thence Northerly to the Northeast corner of Township 13S, Range 28E, Thence Westerly to the Southeast corner of Township 12S, Range 27E, Thence Northerly to the Northeast corner of Township 12S, Range 27E, Thence Westerly to the Southeast corner of Township 11S, Range 26E, Thence Northerly to the Northeast corner of Township 11S, Range 26E, Thence Westerly to the Southeast corner of Township 10S, Range 25E, Thence Northerly to the Northeast corner of Township 9S, Range 25E, Thence Westerly to the Southeast corner of Township 8S, Range 24E, Thence Northerly to the Northeast corner of Township 8S, Range 24E, Thence Westerly to the Southeast corner of Township 7S, Range 23E, Thence Northerly to the Northeast corner of Township 6S, Range 23E, Thence Westerly to the Southeast corner of Township 5S, Range 20E, Thence Northerly to the Northeast corner of Township 5S, Range 20E, Thence Westerly to the Southeast corner of Township 4S, Range 19E, Thence Northerly to the Northeast corner of Township 1S, Range 19E, Thence Westerly to the Southeast corner of Township 1N, Range 18E, Thence Northerly to the Northeast corner of Township 3N, Range 18E, Thence Westerly to the Southeast corner of Township 4N, Range 17E, Thence Northerly to the Northeast corner of Township 4N, Range 17E, Thence Westerly to the Southeast corner of Township 5N, Range 15E, Thence Northerly to the Northeast corner of Township 5N, Range 15E, Thence Westerly to the Southeast corner of Township 6N, Range 14E, Thence Northerly to the Northeast corner of Township 10N, Range 14E, Thence Easterly along the Southern line of Township 11N, to the California/Nevada State Border, Thence Northerly along the California/Nevada State Border to the Northerly line of Township 17N, Thence Westerly to the Southeast corner of Township 18N, Range 10E, Thence Northerly to the Northeast corner of Township 20N, Range 10E, Thence Westerly to the Southeast corner of Township 21N, Range 9E, Thence Northerly to the Northeast corner of Township 21N, Range 9E, Thence Westerly to the Southeast corner of Township 22N, Range 8E, Thence Northerly to the Northeast corner of Township 22N, Range 8E, Thence Westerly to the Northwest corner of Township 22N, Range 8E, Thence Northerly to the Southwest corner of Township 27N, Range 8E, Thence Easterly to the Southeast corner of Township 27N, Range 8E, Thence Northerly to the Northeast corner of Township 28N, Range 8E, Thence Westerly to the Southeast corner of Township 29N, Range 6E, Thence Northerly to the Northeast corner of Township 32N, Range 6E, Thence Westerly to the Northwest corner of Township 32N, Range 6E, Thence Northerly to the Northeast corner of Township 35N, Range 5E, Thence Westerly to the Southeast corner of Township 36N, Range 3E, Thence Northerly to the Northeast corner of township 36N, Range 3E, Thence Westerly to the Southeast corner of Township 37N, Range 1W, Thence Northerly to the Northeast corner of Township 38N, Range 1W, Thence Westerly to the Southeast corner of Township 39N, Range 2W, Thence Northerly to the Northeast corner of Township 40N, Range 2W, Thence Westerly to the Southeast corner of Township 41N, Range 4W, Thence Northerly to the Northeast corner of Township 42N, Range 4W, Thence Westerly to the Southeast corner of Township 43N, Range 5W, Thence Northerly to the California/Oregon State Border, Thence Westerly along the California/Oregon State Border to the Westerly Boundary of Township Range 8W, Thence Southerly to the Southwest corner of Township 43N, Range 8W, Thence Easterly to the Southeast corner of Township 43N, Range 8W, Thence Southerly to the Southwest corner of Township 42N, Range 7W, Thence Easterly to the Southeast corner of Township 42N, Range 7W, Thence Southerly to the Southwest corner of Township 41N, Range 6W, Thence Easterly to the Northwest corner of Township 40N, Range 5W, Thence Southerly to the Southwest corner of Township 38N, Range 5W, Thence Westerly to the Northwest corner of Township 37N, Range 6W, Thence Southerly to the Southwest corner of Township 35N, Range 6W, Thence Westerly to the Northwest corner of Township 34N, Range 10W, Thence Southerly to the Southwest corner of Township 31N, Range 10W, Thence Easterly to the Northwest corner of Township 30N, Range 9W, Thence Southerly to the Southwest corner of Township 30N, Range 9W, Thence Easterly to the Northwest corner of Township 29N, Range 8W, Thence Southerly to the Southwest corner of Township 23N, Range 8W, Thence Easterly to the Northwest corner of Township 22N, Range 6W, Thence Southerly to the Southwest corner of Township 16N, Range 6W, Thence Westerly to the Southeast corner of Township 16N, Range 9W, Thence Northerly to the Northeast corner of Township 16N, Range 9W, Thence Westerly to the Southeast corner of Township 17N, Range 12W, Thence Northerly to the Northeast corner of Township 18N, Range 12W, Thence Westerly to the Northwest corner of Township 18N, Range 15W, Thence Southerly to the Southwest corner of Township 14N, Range 15W, Thence Easterly to the Northwest corner of Township 13N, Range 14W, Thence Southerly to the Southwest corner of Township 13N, Range 14W, Thence Easterly to the Northwest corner of Township 12N, Range 13W, Thence Southerly to the Southwest corner of Township 12N, Range 13W, Thence Easterly to the Northwest corner of Township 11N, Range 12W, Thence Southerly into the Pacific Ocean and Commencing in the Pacific Ocean on the extension of the Humboldt Base Line, Thence Easterly to the Northwest corner of Township 1S, Range 2E, Thence Southerly to the Southwest corner of Township 2S, Range 2E, Thence Easterly to the Northwest corner of Township 3S, Range 3E, Thence Southerly to the Southwest corner of Township 5S, Range 3E, Thence Easterly to the Southeast corner of Township 5S, Range 4E, Thence Northerly to the Northeast corner of Township 4S, Range 4E, Thence Westerly to the Southeast corner of Township 3S, Range 3E, Thence Northerly to the Northeast corner of Township 5N, Range 3E, Thence Easterly to the Southeast corner of Township 6N, Range 5E, Thence Northerly to the Northeast corner of Township 7N, Range 5E, Thence Westerly to the Southeast corner of Township 8N, Range 3E, Thence Northerly to the Northeast corner of Township 9N, Range 3E, Thence Westerly to the Southeast corner of Township 10N, Range 1E, Thence Northerly to the Northeast corner of Township 13N, Range 1E, Thence Westerly into the Pacific Ocean, excluding that portion of Northern California contained within the following lines: Commencing at the Southwest corner of Township 12N, Range 11E, of the Mount Diablo Base and Meridian, Thence Easterly to the Southeast corner of Township 12N, Range 16E, Thence Northerly to the Northeast corner of Township 12N, Range 16E, Thence Westerly to the Southeast corner of Township 13N, Range 15E, Thence Northerly to the Northeast corner of Township 13N, Range 15E, Thence Westerly to the Southeast corner of Township 14N, Range 14E, Thence Northerly to the Northeast corner of Township 16N, Range 14E, Thence Westerly to the Northwest corner of Township 16N, Range 12E, Thence Southerly to the Southwest corner of Township 16N, Range 12E, Thence Westerly to the Northwest corner of Township 15N, Range 11E, Thence Southerly to the point of beginning at the Southwest corner of Township 12N, Range 11E.";
 
-/* ---------------- parsing ---------------- */
+/* =====================================================================
+   Parser. Tokenise the text into an ordered stream, then walk it.
+   ===================================================================== */
 
 function normalizeMeridian(raw) {
-  if (/Humboldt/i.test(raw)) return "Humboldt";
-  if (/Bernardino/i.test(raw)) return "San Bernardino";
+  var s = raw.replace(/[\s.&]/g, "").toUpperCase();
+  if (/HUMBOLDT|^HBM$|^HB$/.test(s)) return "Humboldt";
+  if (/BERNARDINO|^SBBM$|^SBM$/.test(s)) return "San Bernardino";
   return "Mount Diablo";
 }
-
-function opposite(d) {
-  return { N: "S", S: "N", E: "W", W: "E" }[d] || null;
+function normalizeCorner(raw) {
+  var s = raw.replace(/[\s.]/g, "").toUpperCase();
+  if (s === "NORTHEAST" || s === "NE") return "NE";
+  if (s === "NORTHWEST" || s === "NW") return "NW";
+  if (s === "SOUTHEAST" || s === "SE") return "SE";
+  return "SW";
 }
-
-// First travel bearing stated after a given position in the text.
-function dirAfter(text, idx) {
-  var m = new RegExp(THENCE_DIR_SRC, "i").exec(text.slice(idx));
-  return m ? m[1].charAt(0).toUpperCase() : null;
+function normalizeBorder(m) {
+  var w = (m[1] || m[2] || m[3] || "").toLowerCase();
+  if (w.indexOf("oregon") === 0) return "Oregon";
+  if (w.indexOf("nevada") === 0) return "Nevada";
+  if (w.indexOf("mexic") === 0) return "Mexico";
+  return "Arizona";
 }
+function bearingLetter(word) { return word.charAt(0).toUpperCase(); }
+function opposite(d) { return { N: "S", S: "N", E: "W", W: "E" }[d] || null; }
 
-// Last travel bearing stated before a given position in the text.
-function dirBefore(text, idx) {
-  var re = new RegExp(THENCE_DIR_SRC, "gi"), s = text.slice(0, idx), m, last = null;
-  while ((m = re.exec(s)) !== null) last = m[1];
-  return last ? last.charAt(0).toUpperCase() : null;
-}
-
-// Split the description into rings. Each "Commencing" starts a new ring;
-// a ring is a HOLE (cut out of Area 1) if the text just before it says
-// "excluding" / "less and except" / similar.
-function splitRings(text) {
-  var re = /Commencing/gi, starts = [], m;
-  while ((m = re.exec(text)) !== null) starts.push(m.index);
-  if (!starts.length) return [{ text: text, role: "outer", label: "Boundary" }];
-
-  var rings = [];
-  for (var i = 0; i < starts.length; i++) {
-    var chunk = text.slice(starts[i], i + 1 < starts.length ? starts[i + 1] : text.length);
-    var lookback = text.slice(Math.max(0, starts[i] - 220), starts[i]);
-    var isHole = new RegExp(EXCLUDE_SRC, "i").test(lookback);
-    rings.push({ text: chunk, role: isHole ? "hole" : "outer", label: "" });
+function collect(text, src, kind, build) {
+  var re = new RegExp(src, "gi"), m, out = [];
+  while ((m = re.exec(text)) !== null) {
+    var tok = build(m);
+    if (tok) { tok.kind = kind; tok.i = m.index; tok.end = m.index + m[0].length; out.push(tok); }
   }
-  var outerN = 0, holeN = 0;
-  for (var k = 0; k < rings.length; k++) {
-    var mm = new RegExp(MERIDIAN_SRC, "i").exec(rings[k].text);
-    var mer = mm ? normalizeMeridian(mm[1]) : null;
-    if (rings[k].role === "hole") {
-      holeN++;
-      rings[k].label = "Excluded area " + holeN + (mer ? " \u00b7 " + mer : "");
-    } else {
-      outerN++;
-      rings[k].label = "Area 1 \u00b7 part " + outerN + (mer ? " \u00b7 " + mer : "");
+  return out;
+}
+
+function tokenize(text) {
+  var toks = [];
+  toks = toks.concat(collect(text, CORNER_SRC, "corner", function (m) {
+    return { corner: normalizeCorner(m[1]), twpNo: +m[2], twpDir: m[3].charAt(0).toUpperCase(),
+             rngNo: +m[4], rngDir: m[5].charAt(0).toUpperCase() };
+  }));
+  toks = toks.concat(collect(text, MERIDIAN_SRC, "meridian", function (m) { return { meridian: normalizeMeridian(m[1]) }; }));
+  toks = toks.concat(collect(text, OCEAN_SRC, "ocean", function () { return { text: "Pacific Ocean" }; }));
+  toks = toks.concat(collect(text, BORDER_SRC, "border", function (m) {
+    var b = normalizeBorder(m); return { border: b, text: "California/" + b + " border" };
+  }));
+  toks = toks.concat(collect(text, START_SRC, "start", function () { return {}; }));
+  toks = toks.concat(collect(text, EXCLUDE_SRC, "exclude", function () { return {}; }));
+  toks = toks.concat(collect(text, POB_SRC, "pob", function () { return {}; }));
+  toks = toks.concat(collect(text, BEARING_SRC, "bearing", function (m) { return { dir: bearingLetter(m[1] || m[2]) }; }));
+
+  toks.sort(function (a, b) { return a.i - b.i; });
+
+  // Drop tokens that fall inside a corner match (a corner's own "North"/"East"
+  // fragments) and "start" words that are really part of "point of beginning".
+  var pobSpans = toks.filter(function (t) { return t.kind === "pob"; });
+  var kept = [], cover = -1;
+  for (var k = 0; k < toks.length; k++) {
+    var t = toks[k];
+    if (t.kind === "corner") { cover = t.end; kept.push(t); continue; }
+    if (t.i < cover) continue;
+    if (t.kind === "start" && pobSpans.some(function (p) { return t.i >= p.i && t.i < p.end; })) continue;
+    kept.push(t);
+  }
+  return kept;
+}
+
+// Walk the token stream into rings of segments, each segment carrying the
+// bearing of travel into it and (for gaps) out of it.
+function parseDescription(text) {
+  var toks = tokenize(text);
+  var rings = [], cur = null, meridian = "Mount Diablo";
+  var excludePending = false, sawCornerInRing = false, bearing = null;
+
+  var ringNamedMeridian = false;
+  function openRing() {
+    cur = { segments: [], role: excludePending ? "hole" : "outer", closesAtPOB: false };
+    rings.push(cur);
+    excludePending = false; sawCornerInRing = false; bearing = null; ringNamedMeridian = false;
+  }
+  function pushSeg(seg) {
+    if (!cur) openRing();
+    seg.bearingIn = bearing; bearing = null;
+    // Collapse repeated references to the same feature ("along the border ...
+    // to the border") and a corner restated as the point of beginning.
+    var prev = cur.segments[cur.segments.length - 1];
+    if (prev && prev.type === seg.type) {
+      if (seg.type === "gap" && prev.text === seg.text) { prev.bearingOut = prev.bearingOut || seg.bearingIn; return; }
+      if (seg.type === "corner" && sameCorner(prev, seg)) return;
+    }
+    cur.segments.push(seg);
+  }
+
+  for (var k = 0; k < toks.length; k++) {
+    var t = toks[k];
+    switch (t.kind) {
+      case "start":
+        // A new ring only if the current one already has content.
+        if (!cur || sawCornerInRing) openRing();
+        break;
+      case "exclude":
+        excludePending = true;
+        break;
+      case "meridian":
+        meridian = t.meridian;
+        // "Township 12N, Range 11E, of the Mount Diablo Base and Meridian":
+        // the meridian is named after the corner it governs. Apply it back
+        // over any corner in this ring that was only inheriting a meridian.
+        if (cur) cur.segments.forEach(function (sg) {
+          if (sg.type === "corner" && !sg.meridianExplicit) { sg.meridian = meridian; sg.meridianExplicit = true; }
+        });
+        ringNamedMeridian = true;
+        break;
+      case "bearing":
+        bearing = t.dir;
+        // A bearing following a gap is that gap's exit bearing.
+        if (cur && cur.segments.length) {
+          var last = cur.segments[cur.segments.length - 1];
+          if (last.type === "gap" && !last.bearingOut && !sawSinceGap(cur, last)) last.bearingOut = t.dir;
+        }
+        break;
+      case "corner":
+        pushSeg({ type: "corner", meridian: meridian, meridianExplicit: ringNamedMeridian, corner: t.corner,
+                  twpNo: t.twpNo, twpDir: t.twpDir, rngNo: t.rngNo, rngDir: t.rngDir });
+        sawCornerInRing = true;
+        break;
+      case "ocean":
+        pushSeg({ type: "gap", gap: "ocean", text: "Pacific Ocean" });
+        break;
+      case "border":
+        pushSeg({ type: "gap", gap: "border", border: t.border, text: t.text });
+        break;
+      case "pob":
+        if (cur) cur.closesAtPOB = true;
+        break;
     }
   }
+
+  // Attach ring metadata.
+  rings = rings.filter(function (r) { return r.segments.some(function (s) { return s.type === "corner"; }); });
+  var outerN = 0, holeN = 0;
+  rings.forEach(function (r) {
+    var first = r.segments[0], last = r.segments[r.segments.length - 1];
+    var firstCorner = r.segments.filter(function (s) { return s.type === "corner"; })[0];
+    r.meridian = firstCorner.meridian;
+    r.startsInOcean = first.type === "gap" && first.gap === "ocean";
+    r.endsInOcean = last.type === "gap" && last.gap === "ocean";
+    // Leaving the ocean heading X means the open end lies opposite X.
+    r.startDir = r.startsInOcean ? opposite(r.segments[1] && r.segments[1].bearingIn) : null;
+    r.endDir = r.endsInOcean ? (last.bearingIn || null) : null;
+    // A ring that ends on the corner it started at is explicitly closed.
+    var corners = r.segments.filter(function (s) { return s.type === "corner"; });
+    if (corners.length > 2 && sameCorner(corners[0], corners[corners.length - 1])) {
+      r.segments.splice(r.segments.lastIndexOf(corners[corners.length - 1]), 1);
+      r.closesAtPOB = true;
+    }
+    if (r.role === "hole") { holeN++; r.label = "Excluded area " + holeN + " \u00b7 " + r.meridian; }
+    else { outerN++; r.label = "Area 1 \u00b7 part " + outerN + " \u00b7 " + r.meridian; }
+  });
   return rings;
 }
 
-function meridianAt(text, uptoIndex, fallback) {
-  var re = new RegExp(MERIDIAN_SRC, "gi"), last = fallback, m;
-  while ((m = re.exec(text)) !== null) {
-    if (m.index >= uptoIndex) break;
-    last = normalizeMeridian(m[1]);
-  }
-  return last;
+function sameCorner(a, b) {
+  return a.corner === b.corner && a.twpNo === b.twpNo && a.twpDir === b.twpDir &&
+         a.rngNo === b.rngNo && a.rngDir === b.rngDir && a.meridian === b.meridian;
+}
+function sawSinceGap(ring, gapSeg) {
+  return ring.segments.indexOf(gapSeg) !== ring.segments.length - 1;
 }
 
-function parseRing(ringText, fallbackMeridian) {
-  var found = [], m;
-  var cornerRe = new RegExp(CORNER_SRC, "gi");
-  while ((m = cornerRe.exec(ringText)) !== null) found.push({ i: m.index, kind: "corner", m: m });
-  var gapRe = new RegExp(NONPLSS_SRC, "gi");
-  while ((m = gapRe.exec(ringText)) !== null) found.push({ i: m.index, kind: "gap", m: m });
-  found.sort(function (a, b) { return a.i - b.i; });
+/* =====================================================================
+   PLSS grid bookkeeping. Township edges are shared with neighbours, so
+   index them once per meridian; a missing or shoreline-clipped township
+   can then be rebuilt from the townships around it.
+   ===================================================================== */
 
-  var segs = [];
-  for (var n = 0; n < found.length; n++) {
-    var f = found[n];
-    if (f.kind === "corner") {
-      segs.push({
-        type: "corner",
-        meridian: meridianAt(ringText, f.i, fallbackMeridian),
-        corner: CORNER_MAP[f.m[1].toLowerCase()],
-        twpNo: +f.m[2], twpDir: f.m[3].toUpperCase(),
-        rngNo: +f.m[4], rngDir: f.m[5].toUpperCase()
-      });
-    } else {
-      var prev = segs[segs.length - 1];
-      if (prev && prev.type === "gap" && prev.text.toLowerCase() === f.m[0].toLowerCase()) continue;
-      segs.push({ type: "gap", text: f.m[0], at: f.i });
-    }
-  }
-  return segs;
-}
-
-function parseDescription(text) {
-  var rings = splitRings(text).map(function (r) {
-    var mm = new RegExp(MERIDIAN_SRC, "i").exec(r.text);
-    var fallback = mm ? normalizeMeridian(mm[1]) : "Mount Diablo";
-    var segments = parseRing(r.text, fallback);
-    var first = segments[0], last = segments[segments.length - 1];
-    var isOcean = function (s) { return s && s.type === "gap" && /Pacific Ocean/i.test(s.text); };
-
-    // A description that begins and/or ends out in the Pacific is an OPEN
-    // polyline. The direction it runs matters: "Thence Southerly into the
-    // Pacific Ocean" leaves the land heading SOUTH, and closing that end to
-    // the west instead folds the ring back over its own coastal legs.
-    var out = {
-      text: r.text, role: r.role, label: r.label, segments: segments,
-      startsInOcean: isOcean(first), endsInOcean: isOcean(last),
-      startDir: null, endDir: null
-    };
-    if (out.startsInOcean) {
-      // Travel leaves the ocean heading X, so the open end lies opposite X.
-      out.startDir = opposite(dirAfter(r.text, first.at + 5));
-    }
-    if (out.endsInOcean) {
-      out.endDir = dirBefore(r.text, last.at);
-    }
-    return out;
-  });
-  return rings.filter(function (r) {
-    return r.segments.some(function (s) { return s.type === "corner"; });
-  });
-}
-
-/* ---------------- PLSS line bookkeeping ----------------
-   Every township edge is shared with its neighbour, so index the edges in a
-   single space per meridian. That lets a township BLM has no record of (the
-   unsurveyed Sierra, mostly) be reconstructed from its neighbours instead of
-   being dropped, which would otherwise short-cut the boundary diagonally. */
-
-var lineStore = {}; // meridian -> { lat: {idx: value}, lon: {idx: value} }
+var lineStore = {};
 
 function latIdx(twpNo, twpDir, which) {
   if (twpDir === "N") return which === "N" ? twpNo : twpNo - 1;
@@ -413,37 +404,26 @@ function lonIdx(rngNo, rngDir, which) {
   if (rngDir === "E") return which === "E" ? rngNo : rngNo - 1;
   return which === "E" ? -(rngNo - 1) : -rngNo;
 }
-// How completely the township fills its own bounding box. A regular interior
-// township is ~1.0 however many vertices BLM densified its edges with; a
-// coastal township clipped to the shoreline is well under that.
 function rectangularity(ring, bbox) {
   var a = 0;
-  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) {
-    a += (ring[j][0] * ring[i][1]) - (ring[i][0] * ring[j][1]);
-  }
-  var boxArea = (bbox.maxLon - bbox.minLon) * (bbox.maxLat - bbox.minLat);
-  if (boxArea <= 0) return 0;
-  return Math.abs(a / 2) / boxArea;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) a += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+  var box = (bbox.maxLon - bbox.minLon) * (bbox.maxLat - bbox.minLat);
+  return box > 0 ? Math.abs(a / 2) / box : 0;
 }
-
-function storeLines(seg, bbox, ring) {
-  var tier = rectangularity(ring, bbox) >= 0.97 ? "clean" : "loose";
-  var byMer = lineStore[seg.meridian] ||
-    (lineStore[seg.meridian] = { clean: { lat: {}, lon: {} }, loose: { lat: {}, lon: {} } });
+function storeLines(seg, bbox, regular) {
+  var tier = regular ? "clean" : "loose";
+  var byMer = lineStore[seg.meridian] || (lineStore[seg.meridian] = { clean: { lat: {}, lon: {} }, loose: { lat: {}, lon: {} } });
   var s = byMer[tier];
   s.lat[latIdx(seg.twpNo, seg.twpDir, "S")] = bbox.minLat;
   s.lat[latIdx(seg.twpNo, seg.twpDir, "N")] = bbox.maxLat;
   s.lon[lonIdx(seg.rngNo, seg.rngDir, "W")] = bbox.minLon;
   s.lon[lonIdx(seg.rngNo, seg.rngDir, "E")] = bbox.maxLon;
 }
-
 function deriveCorner(seg) {
   var byMer = lineStore[seg.meridian];
   if (!byMer) return null;
-  var wantLat = seg.corner.charAt(0) === "N" ? "N" : "S";
-  var wantLon = seg.corner.charAt(1) === "E" ? "E" : "W";
-  var li = latIdx(seg.twpNo, seg.twpDir, wantLat);
-  var oi = lonIdx(seg.rngNo, seg.rngDir, wantLon);
+  var li = latIdx(seg.twpNo, seg.twpDir, seg.corner.charAt(0));
+  var oi = lonIdx(seg.rngNo, seg.rngDir, seg.corner.charAt(1));
   var lat = byMer.clean.lat[li], lon = byMer.clean.lon[oi], exact = true;
   if (typeof lat !== "number") { lat = byMer.loose.lat[li]; exact = false; }
   if (typeof lon !== "number") { lon = byMer.loose.lon[oi]; exact = false; }
@@ -451,44 +431,48 @@ function deriveCorner(seg) {
   return { pt: [lon, lat], exact: exact };
 }
 
-/* ---------------- BLM lookup ---------------- */
+/* =====================================================================
+   BLM lookup
+   ===================================================================== */
 
 async function fetchTownship(seg) {
   var where =
     "TWNSHPNO='" + String(seg.twpNo).padStart(3, "0") + "' AND TWNSHPDIR='" + seg.twpDir + "' " +
     "AND RANGENO='" + String(seg.rngNo).padStart(3, "0") + "' AND RANGEDIR='" + seg.rngDir + "' " +
     "AND PRINMER LIKE '" + MERIDIAN_LIKE[seg.meridian] + "'";
-  var params = new URLSearchParams({
-    where: where, outFields: "PLSSID,TWNSHPLAB", returnGeometry: "true", f: "geojson"
-  });
+  var params = new URLSearchParams({ where: where, outFields: "PLSSID,TWNSHPLAB", returnGeometry: "true", f: "geojson" });
   var resp = await fetch(FEATURE_SERVER + "?" + params);
   if (!resp.ok) throw new Error("server returned " + resp.status);
   var data = await resp.json();
   if (data.error) throw new Error((data.error && data.error.message) || "query rejected");
   if (!data.features || !data.features.length) throw new Error("no match");
-  return { feature: data.features[0], ambiguous: data.features.length > 1 };
+  return data.features;
 }
-
 function outerCoords(feature) {
   var g = feature.geometry;
-  return g.type === "MultiPolygon" ? g.coordinates[0][0] : g.coordinates[0];
+  if (g.type === "MultiPolygon") {
+    // Largest part wins; islands and slivers are not the township.
+    var best = null, bestA = -1;
+    g.coordinates.forEach(function (poly) {
+      var b = bboxOf(poly[0]), a = (b.maxLon - b.minLon) * (b.maxLat - b.minLat);
+      if (a > bestA) { bestA = a; best = poly[0]; }
+    });
+    return best;
+  }
+  return g.coordinates[0];
 }
-
 function bboxOf(ring) {
-  var lons = ring.map(function (c) { return c[0]; });
-  var lats = ring.map(function (c) { return c[1]; });
-  return {
-    minLon: Math.min.apply(null, lons), maxLon: Math.max.apply(null, lons),
-    minLat: Math.min.apply(null, lats), maxLat: Math.max.apply(null, lats)
-  };
+  var minLon = Infinity, maxLon = -Infinity, minLat = Infinity, maxLat = -Infinity;
+  for (var i = 0; i < ring.length; i++) {
+    var p = ring[i];
+    if (p[0] < minLon) minLon = p[0]; if (p[0] > maxLon) maxLon = p[0];
+    if (p[1] < minLat) minLat = p[1]; if (p[1] > maxLat) maxLat = p[1];
+  }
+  return { minLon: minLon, maxLon: maxLon, minLat: minLat, maxLat: maxLat };
 }
-
 function cornerPoint(ring, corner) {
   var b = bboxOf(ring);
-  var tgt = [
-    corner.charAt(1) === "E" ? b.maxLon : b.minLon,
-    corner.charAt(0) === "N" ? b.maxLat : b.minLat
-  ];
+  var tgt = [corner.charAt(1) === "E" ? b.maxLon : b.minLon, corner.charAt(0) === "N" ? b.maxLat : b.minLat];
   var best = ring[0], bd = Infinity;
   for (var i = 0; i < ring.length; i++) {
     var d = Math.pow(ring[i][0] - tgt[0], 2) + Math.pow(ring[i][1] - tgt[1], 2);
@@ -497,7 +481,9 @@ function cornerPoint(ring, corner) {
   return best;
 }
 
-/* ---------------- geometry helpers ---------------- */
+/* =====================================================================
+   Geometry helpers
+   ===================================================================== */
 
 function pointInRing(pt, ring) {
   var x = pt[0], y = pt[1], inside = false;
@@ -507,7 +493,15 @@ function pointInRing(pt, ring) {
   }
   return inside;
 }
-
+function pointInMultiPolygon(pt, mp) {
+  for (var p = 0; p < mp.length; p++) {
+    if (!pointInRing(pt, mp[p][0])) continue;
+    var inHole = false;
+    for (var h = 1; h < mp[p].length; h++) if (pointInRing(pt, mp[p][h])) { inHole = true; break; }
+    if (!inHole) return true;
+  }
+  return false;
+}
 function distToSegment(p, a, b) {
   var dx = b[0] - a[0], dy = b[1] - a[1];
   if (dx === 0 && dy === 0) return Math.hypot(p[0] - a[0], p[1] - a[1]);
@@ -515,7 +509,13 @@ function distToSegment(p, a, b) {
   t = Math.max(0, Math.min(1, t));
   return Math.hypot(p[0] - (a[0] + t * dx), p[1] - (a[1] + t * dy));
 }
-
+function distToMultiPolygonEdge(pt, mp) {
+  var best = Infinity;
+  mp.forEach(function (poly) { poly.forEach(function (ring) {
+    for (var i = 0; i < ring.length - 1; i++) { var d = distToSegment(pt, ring[i], ring[i + 1]); if (d < best) best = d; }
+  }); });
+  return best;
+}
 function segIntersect(p1, p2, p3, p4) {
   var d = (p2[0] - p1[0]) * (p4[1] - p3[1]) - (p2[1] - p1[1]) * (p4[0] - p3[0]);
   if (Math.abs(d) < 1e-12) return null;
@@ -524,211 +524,305 @@ function segIntersect(p1, p2, p3, p4) {
   if (t < 0 || t > 1 || u < 0 || u > 1) return null;
   return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
 }
-
-// A closed boundary must not cross itself. If it does, the fill and the
-// point-in-polygon test both flip parity inside the crossed lobe and agree
-// with each other while being wrong, so this is checked rather than trusted.
 function selfIntersections(ring) {
   var n = ring.length, hits = 0;
-  for (var i = 0; i < n; i++) {
-    for (var j = i + 2; j < n; j++) {
-      if (i === 0 && j === n - 1) continue;
-      if (segIntersect(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n])) hits++;
-    }
+  for (var i = 0; i < n; i++) for (var j = i + 2; j < n; j++) {
+    if (i === 0 && j === n - 1) continue;
+    if (segIntersect(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n])) hits++;
   }
   return hits;
 }
-
-// Turn parsed rings whose corners have been resolved into closed coordinate
-// rings. Kept separate from the click handler so it can be tested directly.
-function buildRings(rings) {
-  var outers = [], holes = [], approxEdges = [];
-
-  for (var q = 0; q < rings.length; q++) {
-    var ring = rings[q];
-    var pts = [], gapQueue = [], shortcut = false;
-    var segs = ring.segments;
-
-    for (var si2 = 0; si2 < segs.length; si2++) {
-      var s2 = segs[si2];
-      if (s2.type === "gap") {
-        if (/State Border/i.test(s2.text)) gapQueue.push(si2);
-        continue;
-      }
-      // A corner neither BLM nor its neighbours could supply. Carry on with a
-      // straight shortcut, but register it so the verdict flags anything near it.
-      if (!s2.pt) { shortcut = true; continue; }
-      if (shortcut && pts.length) {
-        approxEdges.push([pts[pts.length - 1], s2.pt]);
-        shortcut = false;
-      }
-      if (gapQueue.length && pts.length) {
-        // Walk the real state line between the flanking corners.
-        var a = projectToBorder(pts[pts.length - 1]);
-        var b = projectToBorder(s2.pt);
-        var path = borderPath(a, b);
-        for (var z = 0; z < path.length; z++) pts.push(path[z]);
-        gapQueue = [];
-      } else if (gapQueue.length) {
-        gapQueue = [];
-      }
-      pts.push(s2.pt);
-    }
-
-    if (pts.length < 3) continue;
-
-    // Close the ring.
-    if (ring.startsInOcean || ring.endsInOcean) {
-      var FAR = 14;
-      var headDir = ring.startDir || "W";
-      var tailDir = ring.endDir || "W";
-      var headEnd = stepTo(pts[0], headDir, FAR);
-      var tailEnd = stepTo(pts[pts.length - 1], tailDir, FAR);
-      var meet = (ring.startsInOcean && ring.endsInOcean)
-        ? segIntersect(pts[0], headEnd, pts[pts.length - 1], tailEnd) : null;
-
-      if (meet) {
-        // Both legs run out to sea and cross. Stopping both at the crossing is
-        // the smallest closure that honours the two stated bearings.
-        approxEdges.push([pts[pts.length - 1], meet]);
-        approxEdges.push([meet, pts[0]]);
-        pts = [meet].concat(pts);
-      } else {
-        var head = ring.startsInOcean ? capTo(pts[0], headDir) : null;
-        var tail = ring.endsInOcean ? capTo(pts[pts.length - 1], tailDir) : null;
-        if (head) { approxEdges.push([head, pts[0]]); pts = [head].concat(pts); }
-        if (tail) { approxEdges.push([pts[pts.length - 1], tail]); pts.push(tail); }
-        approxEdges.push([pts[pts.length - 1], pts[0]]);
-      }
-    }
-
-    (ring.role === "hole" ? holes : outers).push(pts);
-  }
-
-  return { outers: outers, holes: holes, approxEdges: approxEdges };
+function ringArea(ring) {
+  var a = 0;
+  for (var i = 0, j = ring.length - 1; i < ring.length; j = i++) a += ring[j][0] * ring[i][1] - ring[i][0] * ring[j][1];
+  return Math.abs(a / 2);
 }
-
 function stepTo(pt, dir, far) {
   if (dir === "N") return [pt[0], pt[1] + far];
   if (dir === "S") return [pt[0], pt[1] - far];
   if (dir === "E") return [pt[0] + far, pt[1]];
   return [pt[0] - far, pt[1]];
 }
+function capToBox(pt, dir) {
+  if (dir === "N") return [pt[0], BOX.n];
+  if (dir === "S") return [pt[0], BOX.s];
+  if (dir === "E") return [BOX.e, pt[1]];
+  return [BOX.w, pt[1]];
+}
+// Position of a point on the box perimeter, clockwise from the SW corner.
+function boxParam(pt) {
+  var W = BOX.e - BOX.w, H = BOX.n - BOX.s;
+  if (Math.abs(pt[0] - BOX.w) < 1e-9) return pt[1] - BOX.s;                 // west edge, going north
+  if (Math.abs(pt[1] - BOX.n) < 1e-9) return H + (pt[0] - BOX.w);            // north edge, going east
+  if (Math.abs(pt[0] - BOX.e) < 1e-9) return H + W + (BOX.n - pt[1]);        // east edge, going south
+  return H + W + H + (BOX.e - pt[0]);                                         // south edge, going west
+}
+function boxCorners() { return [[BOX.w, BOX.n], [BOX.e, BOX.n], [BOX.e, BOX.s], [BOX.w, BOX.s]]; }
+// Walk the box perimeter from a to b in either direction; returns the two
+// candidate vertex lists (excluding a and b themselves).
+function boxWalks(a, b) {
+  var pa = boxParam(a), pb = boxParam(b), P = 2 * ((BOX.e - BOX.w) + (BOX.n - BOX.s));
+  var corners = boxCorners().map(function (c) { return { p: boxParam(c), c: c }; });
+  function walk(from, to) {
+    var out = [], d = ((to - from) % P + P) % P;
+    corners.forEach(function (c) { var dc = ((c.p - from) % P + P) % P; if (dc > 0 && dc < d) out.push({ dc: dc, c: c.c }); });
+    out.sort(function (x, y) { return x.dc - y.dc; });
+    return out.map(function (o) { return o.c; });
+  }
+  return [walk(pa, pb), walk(pb, pa).reverse()];
+}
 
-/* State-border legs. The description names the border and a line to follow
-   it to; project the flanking corners onto the border and walk it. */
-function projectToBorder(pt) {
-  var best = null, dirs = ["E", "N", "S", "W"];
-  for (var d = 0; d < dirs.length; d++) {
-    var end = stepTo(pt, dirs[d], 14);
-    for (var i = 0; i < CA_BORDER.length - 1; i++) {
-      var hit = segIntersect(pt, end, CA_BORDER[i], CA_BORDER[i + 1]);
-      if (!hit) continue;
-      var dist = Math.hypot(hit[0] - pt[0], hit[1] - pt[1]);
-      if (!best || dist < best.dist) best = { dist: dist, pt: hit, seg: i };
+/* State-border legs. */
+function projectToPolyline(pt, poly, preferDir) {
+  var best = null, dirs = preferDir ? [preferDir] : ["E", "N", "S", "W"];
+  for (var pass = 0; pass < 2 && !best; pass++) {
+    if (pass === 1) dirs = ["E", "N", "S", "W"];
+    for (var d = 0; d < dirs.length; d++) {
+      var end = stepTo(pt, dirs[d], 15);
+      for (var i = 0; i < poly.length - 1; i++) {
+        var hit = segIntersect(pt, end, poly[i], poly[i + 1]);
+        if (!hit) continue;
+        var dist = Math.hypot(hit[0] - pt[0], hit[1] - pt[1]);
+        if (!best || dist < best.dist) best = { dist: dist, pt: hit, seg: i };
+      }
     }
   }
   return best;
 }
-
-function borderPath(a, b) {
+function polylinePath(a, b, poly) {
   if (!a || !b) return [];
   var lo = Math.min(a.seg, b.seg), hi = Math.max(a.seg, b.seg), mids = [];
-  for (var i = lo + 1; i <= hi; i++) mids.push(CA_BORDER[i]);
+  for (var i = lo + 1; i <= hi; i++) mids.push(poly[i]);
   if (a.seg > b.seg) mids.reverse();
   return [a.pt].concat(mids, [b.pt]);
 }
 
-/* ---------------- UI ---------------- */
+/* =====================================================================
+   Ring construction
+   ===================================================================== */
+
+// Close an open ring given the directions of its two ocean ends. Returns
+// { pts, approx } or null if the combination cannot be closed.
+function closeRing(pts, ring, headDir, tailDir) {
+  var approx = [], FAR = 15;
+  var out = pts.slice();
+  if (!ring.startsInOcean && !ring.endsInOcean) return { pts: out, approx: approx };
+
+  if (ring.startsInOcean && ring.endsInOcean) {
+    var headEnd = stepTo(out[0], headDir, FAR), tailEnd = stepTo(out[out.length - 1], tailDir, FAR);
+    var meet = segIntersect(out[0], headEnd, out[out.length - 1], tailEnd);
+    if (meet) {
+      approx.push([out[out.length - 1], meet], [meet, out[0]]);
+      return { pts: [meet].concat(out), approx: approx, oceanLegs: [[out[0], meet], [out[out.length - 1], meet]] };
+    }
+    var head = capToBox(out[0], headDir), tail = capToBox(out[out.length - 1], tailDir);
+    var walks = boxWalks(tail, head);
+    var candidates = walks.map(function (mid) {
+      var ring2 = [head].concat(out, [tail], mid);
+      return { pts: ring2, crossings: selfIntersections(ring2), area: ringArea(ring2), mid: mid };
+    }).sort(function (x, y) { return (x.crossings - y.crossings) || (x.area - y.area); });
+    var pick = candidates[0];
+    approx.push([head, out[0]], [out[out.length - 1], tail]);
+    var chain = [tail].concat(pick.mid, [head]);
+    for (var i = 0; i < chain.length - 1; i++) approx.push([chain[i], chain[i + 1]]);
+    return { pts: pick.pts, approx: approx, oceanLegs: [[out[0], head], [out[out.length - 1], tail]] };
+  }
+
+  if (ring.startsInOcean) {
+    var h = capToBox(out[0], headDir);
+    approx.push([h, out[0]], [out[out.length - 1], h]);
+    return { pts: [h].concat(out), approx: approx, oceanLegs: [[out[0], h]] };
+  }
+  var t = capToBox(out[out.length - 1], tailDir);
+  approx.push([out[out.length - 1], t], [t, out[0]]);
+  return { pts: out.concat([t]), approx: approx, oceanLegs: [[out[out.length - 1], t]] };
+}
+
+// A leg "into the Pacific Ocean" must leave the state: its far half is sampled
+// against the state outline, and its end point must be at sea. This is what
+// catches a bearing the text got wrong even when the result happens not to
+// cross itself.
+function closureIsValid(closure, caMP) {
+  if (!closure) return false;
+  if (selfIntersections(closure.pts) > 0) return false;
+  var legs = closure.oceanLegs || [];
+  for (var i = 0; i < legs.length; i++) {
+    var a = legs[i][0], b = legs[i][1];
+    for (var f = 0.5; f <= 1.0001; f += 0.25) {
+      var p = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f];
+      if (pointInMultiPolygon(p, caMP)) return false;
+    }
+  }
+  return true;
+}
+
+// Turn parsed rings whose corners have been resolved into closed coordinate
+// rings. Pure function of its input so it can be tested off-page.
+function buildRings(rings, caMP) {
+  var outers = [], holes = [], approxEdges = [], notes = [];
+  var caCheck = (caMP && caMP.length) ? caMP : CA_COARSE;
+
+  for (var q = 0; q < rings.length; q++) {
+    var ring = rings[q], segs = ring.segments;
+    var pts = [], pendingBorder = null, shortcut = false;
+
+    for (var si = 0; si < segs.length; si++) {
+      var s = segs[si];
+      if (s.type === "gap") {
+        if (s.gap === "border") pendingBorder = s;
+        continue;
+      }
+      if (!s.pt) { shortcut = true; continue; }
+      if (shortcut && pts.length) { approxEdges.push([pts[pts.length - 1], s.pt]); shortcut = false; }
+
+      if (pendingBorder && pts.length) {
+        var B = BORDERS[pendingBorder.border];
+        if (B) {
+          var prev = pts[pts.length - 1];
+          var a = projectToPolyline(prev, B.pts, pendingBorder.bearingIn || null);
+          var b = projectToPolyline(s.pt, B.pts, opposite(s.bearingIn) || null);
+          var path = polylinePath(a, b, B.pts);
+          if (path.length) {
+            for (var z = 0; z < path.length; z++) pts.push(path[z]);
+            if (!B.exact) for (var y = 0; y < path.length - 1; y++) approxEdges.push([path[y], path[y + 1]]);
+          } else {
+            approxEdges.push([prev, s.pt]);
+            notes.push("Could not project onto the " + pendingBorder.border + " state line; drew a chord instead.");
+          }
+        } else {
+          approxEdges.push([pts[pts.length - 1], s.pt]);
+          notes.push("The " + pendingBorder.border + " boundary is not a straight line and is not modelled; a straight chord was drawn and flagged.");
+        }
+      }
+      pendingBorder = null;
+      pts.push(s.pt);
+    }
+    if (pts.length < 3) continue;
+
+    // Close, honouring the stated bearings; fall back to whichever closure
+    // does not cross itself if the stated one does.
+    var stated = closeRing(pts, ring, ring.startDir || "W", ring.endDir || "W");
+    var chosen = stated, substituted = null, failed = false;
+    if ((ring.startsInOcean || ring.endsInOcean) && !closureIsValid(stated, caCheck)) {
+      var dirs = ["N", "S", "E", "W"], best = null;
+      for (var hd = 0; hd < 4; hd++) for (var td = 0; td < 4; td++) {
+        var cand = closeRing(pts, ring, dirs[hd], dirs[td]);
+        if (!closureIsValid(cand, caCheck)) continue;
+        var ar = ringArea(cand.pts);
+        if (!best || ar < best.area) best = { c: cand, area: ar, hd: dirs[hd], td: dirs[td] };
+      }
+      if (best) { chosen = best.c; substituted = best; } else failed = true;
+    }
+    if (substituted) {
+      notes.push(ring.label + ": the ocean bearings read from the text (" + (ring.startDir || "?") + "/" + (ring.endDir || "?") +
+        ") do not produce a boundary whose sea legs reach the sea without crossing; closed with " + substituted.hd + "/" + substituted.td + " instead. Review the offshore legs.");
+    }
+    if (failed) {
+      notes.push(ring.label + ": no closure of the ocean legs could be found that both reaches the sea and avoids crossing itself. The stated bearings were kept; do not rely on the coast.");
+    }
+    if (chosen) {
+      approxEdges = approxEdges.concat(chosen.approx);
+      (ring.role === "hole" ? holes : outers).push(chosen.pts);
+    }
+  }
+  return { outers: outers, holes: holes, approxEdges: approxEdges, notes: notes };
+}
+
+/* =====================================================================
+   Area computation. polygon-clipping does the set algebra; the fallback
+   ring-based path only runs if the library failed to load.
+   ===================================================================== */
+
+var pc = (typeof polygonClipping !== "undefined") ? polygonClipping : null;
+
+function closeRingCoords(r) {
+  var a = r[0], z = r[r.length - 1];
+  return (a[0] === z[0] && a[1] === z[1]) ? r : r.concat([a]);
+}
+function computeAreas(outers, holes, caMP) {
+  if (!pc) return null;
+  var outerGeoms = outers.map(function (r) { return [closeRingCoords(r)]; });
+  var holeGeoms = holes.map(function (r) { return [closeRingCoords(r)]; });
+  var area1 = pc.union.apply(null, outerGeoms);
+  if (holeGeoms.length) area1 = pc.difference(area1, pc.union.apply(null, holeGeoms));
+  var excluded = holeGeoms.length ? pc.intersection(pc.union.apply(null, outerGeoms), pc.union.apply(null, holeGeoms)) : [];
+  var area2, clipped = false;
+  if (caMP && caMP.length) {
+    area1 = pc.intersection(area1, caMP);
+    excluded = excluded.length ? pc.intersection(excluded, caMP) : [];
+    area2 = pc.difference(caMP, area1);
+    clipped = true;
+  } else {
+    var box = [[[BOX.w, BOX.s], [BOX.e, BOX.s], [BOX.e, BOX.n], [BOX.w, BOX.n], [BOX.w, BOX.s]]];
+    area2 = pc.difference([box], area1);
+  }
+  return { area1: area1, area2: area2, excluded: excluded, clipped: clipped };
+}
+
+/* California outline. */
+var caOutline = null, caSource = null, caPromise = null;
+function geomToMP(g) {
+  if (!g) return null;
+  if (g.type === "Polygon") return [g.coordinates];
+  if (g.type === "MultiPolygon") return g.coordinates;
+  if (g.rings) return g.rings.map(function (r) { return [r]; }); // esri json, rings as separate parts
+  return null;
+}
+function loadCalifornia() {
+  if (caPromise) return caPromise;
+  caPromise = (async function () {
+    for (var i = 0; i < CA_SOURCES.length; i++) {
+      try {
+        var r = await fetch(CA_SOURCES[i].url);
+        if (!r.ok) continue;
+        var d = await r.json();
+        var g = d.features && d.features[0] && d.features[0].geometry;
+        var mp = geomToMP(g);
+        if (mp && mp.length) {
+          if (pc && g.rings) mp = pc.union.apply(null, mp.map(function (p) { return [p]; })); // esri rings -> proper polygons
+          caOutline = mp; caSource = CA_SOURCES[i].name;
+          return mp;
+        }
+      } catch (e) { /* try next */ }
+    }
+    return null;
+  })();
+  return caPromise;
+}
+// Straight statutory lines only; used when the outline is unavailable.
+function outsideCaliforniaHeuristic(lon, lat) {
+  if (lat > 42.0) return "Oregon";
+  if (lon > -120.0 && lat >= 39.0) return "Nevada";
+  if (lat < 39.0 && lat > 35.0) { var t = (39.0 - lat) / (39.0 - 35.002); if (lon > -120.0 + t * (120.0 - 114.633)) return "Nevada"; }
+  return null;
+}
+
+/* =====================================================================
+   UI plumbing
+   ===================================================================== */
 
 function el(id) { return document.getElementById(id); }
-var descEl = el("desc"), bannerEl = el("banner"), summaryEl = el("summary"),
-    listEl = el("cornerList"), plotBtn = el("plotBtn"), progressEl = el("progress"),
-    downloadBtn = el("downloadBtn"), emptyState = el("emptyState"),
-    legend = el("legend"), verdictEl = el("verdict");
+var descEl = el("desc"), bannerEl = el("banner"), summaryEl = el("summary"), listEl = el("cornerList"),
+    plotBtn = el("plotBtn"), progressEl = el("progress"), downloadBtn = el("downloadBtn"),
+    emptyState = el("emptyState"), legend = el("legend"), verdictEl = el("verdict");
+var map, shapeLayer, markerLayer, baseLayer = null, plotted = null;
 
-var map, shapeLayer, markerLayer, baseLayer = null;
-var plotted = null;
-
-function showBanner(kind, html) {
-  bannerEl.className = "banner " + kind;
-  bannerEl.innerHTML = html;
-}
+function showBanner(kind, html) { bannerEl.className = "banner " + kind; bannerEl.innerHTML = html; }
 function clearBanner() { bannerEl.className = "banner"; bannerEl.innerHTML = ""; }
-
-el("exampleBtn").addEventListener("click", function () {
-  descEl.value = EXAMPLE_TEXT;
-  clearBanner();
-});
-
-// FileReader with a callback, not await — hidden inputs and promise-based file
-// reads have both bitten us before, so the input stays visible and plain.
-el("pdfInput").addEventListener("change", function (e) {
-  var file = e.target.files[0];
-  if (!file) return;
-  showBanner("warn", "Reading PDF\u2026");
-  var reader = new FileReader();
-  reader.onerror = function () { showBanner("error", "Couldn't read that file."); };
-  reader.onload = function () {
-    var buf = reader.result;
-    pdfjsLib.getDocument({ data: buf }).promise.then(function (pdf) {
-      var out = "", page = 1;
-      function next() {
-        if (page > pdf.numPages) return finish(out, pdf.numPages);
-        pdf.getPage(page).then(function (p) {
-          return p.getTextContent();
-        }).then(function (tc) {
-          out += tc.items.map(function (i) { return i.str; }).join(" ") + "\n";
-          page++;
-          next();
-        });
-      }
-      next();
-    }).catch(function (err) {
-      showBanner("error", "Couldn't read that PDF: " + err.message);
-    });
-  };
-  reader.readAsArrayBuffer(file);
-  e.target.value = "";
-});
-
-function finish(out, pages) {
-  descEl.value = out.replace(/\s+/g, " ").trim();
-  var hits = (out.match(new RegExp(CORNER_SRC, "gi")) || []).length;
-  if (!hits) {
-    showBanner("error",
-      "No township/range corners found in this PDF. If it's a scanned image rather than a text PDF, the text can't be extracted \u2014 copy the description in manually instead.");
-  } else {
-    showBanner("warn",
-      "Extracted text from " + pages + " page(s), containing " + hits +
-      " corner references. <b>Check the box above and delete anything that isn't the boundary you want</b> \u2014 if the PDF holds more than one area description, they'll all be plotted together.");
-  }
-}
+function esc(s) { return String(s).replace(/[<>&]/g, function (c) { return { "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]; }); }
 
 var BASEMAPS = {
-  usgstopo: {
-    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}",
-    attribution: "USGS The National Map", maxZoom: 16
-  },
-  usgsimagery: {
-    url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}",
-    attribution: "USGS The National Map", maxZoom: 16
-  },
-  osm: {
-    url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    attribution: "\u00a9 OpenStreetMap contributors", maxZoom: 18
-  }
+  usgstopo: { url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}", attribution: "USGS The National Map", maxZoom: 16 },
+  usgsimagery: { url: "https://basemap.nationalmap.gov/arcgis/rest/services/USGSImageryTopo/MapServer/tile/{z}/{y}/{x}", attribution: "USGS The National Map", maxZoom: 16 },
+  osm: { url: "https://tile.openstreetmap.org/{z}/{x}/{y}.png", attribution: "\u00a9 OpenStreetMap contributors", maxZoom: 18 }
 };
-
 function setBasemap(key) {
   if (!map) return;
   if (baseLayer) map.removeLayer(baseLayer);
   var b = BASEMAPS[key] || BASEMAPS.usgstopo;
-  baseLayer = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom });
-  baseLayer.addTo(map);
+  baseLayer = L.tileLayer(b.url, { attribution: b.attribution, maxZoom: b.maxZoom }).addTo(map);
   baseLayer.bringToBack();
 }
-
 function ensureMap() {
   if (map) return;
   emptyState.style.display = "none";
@@ -739,233 +833,211 @@ function ensureMap() {
   legend.style.display = "block";
   map.on("click", function (e) { checkLocation(e.latlng.lng, e.latlng.lat, null); });
 }
-
-el("basemap").addEventListener("change", function (e) { setBasemap(e.target.value); });
-
 function renderList(rings) {
   listEl.innerHTML = "";
   rings.forEach(function (ring, ri) {
-    var head = document.createElement("div");
-    head.className = "ring-head";
-    head.textContent = ring.label;
-    listEl.appendChild(head);
+    var head = document.createElement("div"); head.className = "ring-head"; head.textContent = ring.label; listEl.appendChild(head);
     ring.segments.forEach(function (seg, si) {
       var row = document.createElement("div");
-      row.className = "corner-row " + (seg.type === "corner" ? "" : "gap");
-      row.id = "r" + ri + "s" + si;
-      var d = document.createElement("span");
-      d.className = "desc";
-      d.textContent = seg.type === "corner"
-        ? seg.corner + "  T" + seg.twpNo + seg.twpDir + "  R" + seg.rngNo + seg.rngDir
-        : seg.text;
-      var s = document.createElement("span");
-      s.className = "status";
-      s.textContent = seg.type === "corner" ? "\u2014" : "gap";
-      row.append(d, s);
-      listEl.appendChild(row);
+      row.className = "corner-row " + (seg.type === "corner" ? "" : "gap"); row.id = "r" + ri + "s" + si;
+      var d = document.createElement("span"); d.className = "desc";
+      d.textContent = seg.type === "corner" ? seg.corner + "  T" + seg.twpNo + seg.twpDir + "  R" + seg.rngNo + seg.rngDir : seg.text;
+      var st = document.createElement("span"); st.className = "status"; st.textContent = seg.type === "corner" ? "\u2014" : "gap";
+      row.append(d, st); listEl.appendChild(row);
     });
   });
 }
+function mpToLeaflet(mp) { return mp.map(function (poly) { return poly.map(function (ring) { return ring.map(function (p) { return [p[1], p[0]]; }); }); }); }
+function ringToLeaflet(ring) { return ring.map(function (p) { return [p[1], p[0]]; }); }
 
-/* ---------------- plot ---------------- */
+/* =====================================================================
+   Plot
+   ===================================================================== */
 
 plotBtn.addEventListener("click", async function () {
   clearBanner();
-  verdictEl.style.display = "none";
-  plotted = null;
-  downloadBtn.style.display = "none";
-  el("lookupBlock").style.display = "none";
+  verdictEl.style.display = "none"; plotted = null;
+  downloadBtn.style.display = "none"; el("lookupBlock").style.display = "none";
   lineStore = {};
 
   var text = descEl.value.trim();
-  if (!text) {
-    showBanner("error", "Nothing to plot \u2014 paste a boundary description, or click \"Load example\".");
-    return;
-  }
+  if (!text) { showBanner("error", "Nothing to plot \u2014 paste a boundary description, or click \"Load example\"."); return; }
 
   var rings = parseDescription(text);
-  var totalCorners = rings.reduce(function (n, r) {
-    return n + r.segments.filter(function (s) { return s.type === "corner"; }).length;
-  }, 0);
-
+  var totalCorners = rings.reduce(function (n, r) { return n + r.segments.filter(function (s) { return s.type === "corner"; }).length; }, 0);
   if (!totalCorners) {
-    showBanner("error",
-      "No township/range corners found. This tool reads phrases like <code>Northwest corner of Township 20S, Range 6E</code>. If your description uses a different format, it won't parse.");
-    summaryEl.textContent = ""; listEl.innerHTML = "";
-    return;
+    showBanner("error", "No township/range corners found. This tool reads phrases like <code>Northwest corner of Township 20S, Range 6E</code> (abbreviations such as <code>NW corner of T20S R6E</code> also work). If the description uses another form, paste a sample and it can be added.");
+    summaryEl.textContent = ""; listEl.innerHTML = ""; return;
   }
 
   renderList(rings);
   var holeCount = rings.filter(function (r) { return r.role === "hole"; }).length;
-  summaryEl.textContent =
-    (rings.length - holeCount) + " area part(s) \u00b7 " + holeCount +
-    " exclusion(s) \u00b7 " + totalCorners + " corners";
+  summaryEl.textContent = (rings.length - holeCount) + " area part(s) \u00b7 " + holeCount + " exclusion(s) \u00b7 " + totalCorners + " corners";
 
   ensureMap();
-  shapeLayer.clearLayers();
-  markerLayer.clearLayers();
-  plotBtn.disabled = true;
-  progressEl.style.display = "block";
-  progressEl.max = totalCorners;
-  progressEl.value = 0;
+  shapeLayer.clearLayers(); markerLayer.clearLayers();
+  plotBtn.disabled = true; progressEl.style.display = "block"; progressEl.max = totalCorners; progressEl.value = 0;
 
-  var networkFail = false, ambiguousCount = 0, pending = [];
+  var caLoading = loadCalifornia();
 
-  // Pass 1 - fetch every township, record its grid lines, note the misses.
-  for (var ri = 0; ri < rings.length; ri++) {
-    for (var si = 0; si < rings[ri].segments.length; si++) {
-      var seg = rings[ri].segments[si];
-      if (seg.type === "gap") continue;
-      var row = el("r" + ri + "s" + si);
-      try {
-        var res = await fetchTownship(seg);
-        var coords = outerCoords(res.feature);
-        storeLines(seg, bboxOf(coords), coords);
-        seg.pt = cornerPoint(coords, seg.corner);
-        seg.status = res.ambiguous ? "ok (dup)" : "ok";
-        if (res.ambiguous) ambiguousCount++;
-        row.className = "corner-row ok";
-      } catch (err) {
-        if (err instanceof TypeError) networkFail = true;
-        seg.pt = null;
-        seg.status = err instanceof TypeError ? "blocked" : err.message;
-        row.className = "corner-row error";
-        pending.push({ seg: seg, row: row });
-      }
-      row.querySelector(".status").textContent = seg.status;
-      progressEl.value++;
-      await new Promise(function (r) { setTimeout(r, 55); });
+  // Pass 1 - fetch every township and learn its grid lines.
+  var networkFail = false, fetched = [];
+  for (var ri = 0; ri < rings.length; ri++) for (var si = 0; si < rings[ri].segments.length; si++) {
+    var seg = rings[ri].segments[si];
+    if (seg.type !== "corner") continue;
+    var row = el("r" + ri + "s" + si);
+    try {
+      var feats = await fetchTownship(seg);
+      var best = null;
+      feats.forEach(function (f) {
+        var c = outerCoords(f), bb = bboxOf(c), rect = rectangularity(c, bb);
+        if (!best || rect > best.rect) best = { coords: c, bbox: bb, rect: rect };
+      });
+      seg.record = best; seg.dup = feats.length > 1;
+      storeLines(seg, best.bbox, best.rect >= 0.97);
+      fetched.push(seg);
+    } catch (err) {
+      if (err instanceof TypeError) networkFail = true;
+      seg.record = null; seg.fetchError = err instanceof TypeError ? "blocked" : err.message;
     }
+    row.querySelector(".status").textContent = seg.record ? "fetched" : seg.fetchError;
+    progressEl.value++;
+    await new Promise(function (r) { setTimeout(r, 45); });
   }
+  progressEl.style.display = "none"; plotBtn.disabled = false;
 
-  progressEl.style.display = "none";
-  plotBtn.disabled = false;
-
-  if (networkFail) {
-    showBanner("error",
-      "Couldn't reach BLM's map service from the browser. This is usually a CORS restriction on their server, not a problem with your setup.");
+  if (networkFail && !fetched.length) {
+    showBanner("error", "Couldn't reach BLM's map service from the browser. This is usually a CORS restriction on their server, not a problem with your setup.");
     return;
   }
 
-  // Pass 2 - rebuild misses from neighbouring townships' shared grid lines.
-  var derived = 0, approxDerived = 0, unresolved = 0, unresolvedNames = [];
-  for (var p = 0; p < pending.length; p++) {
-    var ps = pending[p].seg;
-    var d = deriveCorner(ps);
-    if (d) {
-      ps.pt = d.pt;
-      ps.status = d.exact ? "derived" : "derived~";
-      pending[p].row.className = "corner-row derived";
-      if (d.exact) derived++; else approxDerived++;
+  // Pass 2 - resolve every corner now that the grid is known.
+  var counts = { ok: 0, dup: 0, irregular: 0, derived: 0, derivedApprox: 0, unresolved: 0 }, unresolvedNames = [];
+  for (var ri2 = 0; ri2 < rings.length; ri2++) for (var si2 = 0; si2 < rings[ri2].segments.length; si2++) {
+    var sg = rings[ri2].segments[si2];
+    if (sg.type !== "corner") continue;
+    var rw = el("r" + ri2 + "s" + si2), status, cls;
+    if (sg.record && sg.record.rect >= 0.97) {
+      sg.pt = cornerPoint(sg.record.coords, sg.corner);
+      status = sg.dup ? "ok (dup)" : "ok"; cls = "ok"; counts.ok++; if (sg.dup) counts.dup++;
     } else {
-      ps.pt = null;
-      ps.status = "unresolved";
-      pending[p].row.className = "corner-row error";
-      unresolved++;
-      unresolvedNames.push(ps.corner + " T" + ps.twpNo + ps.twpDir + " R" + ps.rngNo + ps.rngDir);
+      var dv = deriveCorner(sg);
+      if (sg.record && !dv) {
+        sg.pt = cornerPoint(sg.record.coords, sg.corner); status = "ok~"; cls = "derived"; counts.irregular++;
+      } else if (dv) {
+        sg.pt = dv.pt; status = dv.exact ? "derived" : "derived~"; cls = "derived";
+        if (dv.exact) counts.derived++; else counts.derivedApprox++;
+      } else {
+        sg.pt = null; status = "unresolved"; cls = "error"; counts.unresolved++;
+        unresolvedNames.push(sg.corner + " T" + sg.twpNo + sg.twpDir + " R" + sg.rngNo + sg.rngDir);
+      }
     }
-    pending[p].row.querySelector(".status").textContent = ps.status;
+    rw.className = "corner-row " + cls; rw.querySelector(".status").textContent = status;
   }
 
-  // Build rings.
-  var built = buildRings(rings);
-  var outers = built.outers, holes = built.holes, approxEdges = built.approxEdges;
+  var caMP = await caLoading;
+  el("srcTag").textContent = caSource ? "coast: " + caSource : "coast: unavailable";
 
-  if (!outers.length) {
-    showBanner("error", "No complete area could be built from this description.");
-    return;
-  }
-
-  // Holes must sit wholly inside an outer, or the shading and the verdict
-  // will disagree with each other.
-  var strayHoles = 0;
-  var pairedHoles = [];
-  for (var h = 0; h < holes.length; h++) {
-    var host = null;
-    for (var o = 0; o < outers.length; o++) {
-      var allIn = holes[h].every(function (pt) { return pointInRing(pt, outers[o]); });
-      if (allIn) { host = o; break; }
-    }
-    if (host === null) strayHoles++;
-    else pairedHoles.push({ host: host, ring: holes[h] });
-  }
+  var built = buildRings(rings, caMP);
+  if (!built.outers.length) { showBanner("error", "No complete area could be built from this description."); return; }
 
   var crossings = 0;
-  for (var ci = 0; ci < outers.length; ci++) crossings += selfIntersections(outers[ci]);
+  built.outers.forEach(function (o) { crossings += selfIntersections(o); });
 
-  drawAll(outers, pairedHoles, approxEdges);
+  var areas = computeAreas(built.outers, built.holes, caMP);
+  drawAll(built, areas);
 
-  plotted = { outers: outers, holes: pairedHoles.map(function (x) { return x.ring; }), approxEdges: approxEdges };
-  el("lookupBlock").style.display = "block";
-  downloadBtn.style.display = "inline";
+  plotted = { built: built, areas: areas, caMP: caMP };
+  el("lookupBlock").style.display = "block"; downloadBtn.style.display = "inline";
 
   var msgs = [], kind = "warn";
-  if (crossings) {
-    kind = "error";
-    msgs.push("<b>The finished boundary crosses itself in " + crossings + " place(s).</b> " +
-      "Shading and verdicts inside a crossed lobe will both be wrong in the same direction, " +
-      "so nothing here should be relied on until this is resolved.");
-  }
-  if (derived) msgs.push(derived + " corner(s) were not in BLM's data (usually unsurveyed land) and were rebuilt exactly from the adjoining townships' shared section lines.");
-  if (approxDerived) msgs.push(approxDerived + " corner(s) were rebuilt from townships whose records are clipped to the coastline, so those points are approximate.");
-  if (unresolved) {
-    kind = "error";
-    msgs.push("<b>" + unresolved + " corner(s) could not be resolved at all (" + unresolvedNames.join(", ") +
-      ").</b> The boundary is drawn with a straight shortcut across the gap and that shortcut is marked as an approximate edge, so any location near it will be flagged. Everything away from it is unaffected.");
-  }
-  if (ambiguousCount) msgs.push(ambiguousCount + " township(s) returned more than one record; the first was used.");
-  if (strayHoles) msgs.push("<b>" + strayHoles + " excluded area is not fully inside Area 1</b> and was left out of the shading \u2014 review it before relying on this.");
-  if (msgs.length) showBanner(kind, msgs.join(" "));
-  else showBanner("ok", "Boundary plotted. Enter an address, or click any point on the map.");
+  if (crossings) { kind = "error"; msgs.push("<b>The finished boundary crosses itself in " + crossings + " place(s).</b> Shading and verdicts inside a crossed lobe are unreliable."); }
+  if (counts.unresolved) { kind = "error"; msgs.push("<b>" + counts.unresolved + " corner(s) could not be resolved (" + esc(unresolvedNames.join(", ")) + ").</b> A straight shortcut was drawn across each gap and flagged; locations near it will be warned."); }
+  if (counts.derived) msgs.push(counts.derived + " corner(s) were not in BLM's data (usually unsurveyed land) and were rebuilt exactly from the adjoining townships' shared section lines.");
+  if (counts.derivedApprox) msgs.push(counts.derivedApprox + " corner(s) were rebuilt from shoreline-clipped township records and are approximate.");
+  if (counts.irregular) msgs.push(counts.irregular + " corner(s) came from irregular (shoreline-clipped) township records with no neighbour to check against.");
+  if (counts.dup) msgs.push(counts.dup + " township(s) returned more than one record; the most regular one was used.");
+  built.notes.forEach(function (n) { msgs.push(esc(n)); });
+  if (!pc) { kind = "error"; msgs.push("<b>The polygon library did not load</b>, so Area 2 is shown as a plain backdrop and the coast is not clipped. Reload the page."); }
+  else if (!areas.clipped) msgs.push("California's outline could not be fetched, so the coast is approximated by the offshore closing edges and Area 2 is shown as a plain backdrop.");
+  if (msgs.length) showBanner(kind, "<ul><li>" + msgs.join("</li><li>") + "</li></ul>");
+  else showBanner("ok", "Boundary plotted and clipped to the coastline. Enter an address, or click any point on the map.");
 });
 
-function capTo(pt, dir) {
-  if (dir === "N") return [pt[0], LAT_N_OFF];
-  if (dir === "S") return [pt[0], LAT_S_OFF];
-  if (dir === "E") return [LON_OFF + 14, pt[1]];
-  return [LON_OFF, pt[1]];
-}
-
-function drawAll(outers, pairedHoles, approxEdges) {
-  // Area 2 backdrop: California's exact north and east lines plus a generous
-  // offshore margin, with Area 1 and its exclusions punched out. Indicative
-  // shading only - the verdict never consults this layer.
-  var extent = [[-127.0, 42.0], [-120.0, 42.0], [-120.0, 39.0], [-114.633, 35.002], [-114.633, 34.0], [-127.0, 34.0]];
-  var area2Rings = [extent].concat(outers, pairedHoles.map(function (x) { return x.ring; }));
-  L.polygon(area2Rings.map(toLatLng), {
-    color: "#6B7B8A", weight: 1, fillColor: "#7A8794", fillOpacity: 0.30, interactive: false
-  }).addTo(shapeLayer);
-
-  outers.forEach(function (outer, i) {
-    var mine = pairedHoles.filter(function (x) { return x.host === i; }).map(function (x) { return x.ring; });
-    L.polygon([outer].concat(mine).map(toLatLng), {
-      color: "#D98A2B", weight: 2.5, fillColor: "#D98A2B", fillOpacity: 0.35
-    }).bindTooltip("Area 1").addTo(shapeLayer);
+function drawAll(built, areas) {
+  var STYLE = {
+    area2: { color: "#3F5E7C", weight: 1, fillColor: "#506E8C", fillOpacity: 0.32, interactive: false },
+    area1: { color: "#D98A2B", weight: 2.5, fillColor: "#D98A2B", fillOpacity: 0.42 },
+    excl:  { color: "#E0714A", weight: 2, dashArray: "6 4", fillColor: "#E0714A", fillOpacity: 0.35 },
+    approx:{ color: "#3C4A57", weight: 2.5, dashArray: "7 6" }
+  };
+  if (areas) {
+    if (areas.area2.length) L.polygon(mpToLeaflet(areas.area2), STYLE.area2).bindTooltip("Area 2").addTo(shapeLayer);
+    if (areas.area1.length) L.polygon(mpToLeaflet(areas.area1), STYLE.area1).bindTooltip("Area 1").addTo(shapeLayer);
+    if (areas.excluded.length) L.polygon(mpToLeaflet(areas.excluded), STYLE.excl).bindTooltip("Excluded from Area 1 \u2014 treat as Area 2").addTo(shapeLayer);
+  } else {
+    // Library missing: draw the raw rings so the user still sees something.
+    built.outers.forEach(function (o) { L.polygon([ringToLeaflet(o)].concat(built.holes.map(ringToLeaflet)), STYLE.area1).addTo(shapeLayer); });
+    built.holes.forEach(function (h) { L.polygon(ringToLeaflet(h), STYLE.excl).addTo(shapeLayer); });
+  }
+  built.approxEdges.forEach(function (e) {
+    L.polyline([[e[0][1], e[0][0]], [e[1][1], e[1][0]]], STYLE.approx).bindTooltip("Approximate edge").addTo(shapeLayer);
   });
-
-  pairedHoles.forEach(function (x) {
-    L.polygon(toLatLng(x.ring), {
-      color: "#E0714A", weight: 2, dashArray: "6 4",
-      fillColor: "#E0714A", fillOpacity: 0.30
-    }).bindTooltip("Excluded from Area 1 \u2014 treat as Area 2").addTo(shapeLayer);
-  });
-
-  approxEdges.forEach(function (e) {
-    L.polyline([[e[0][1], e[0][0]], [e[1][1], e[1][0]]], {
-      color: "#3C4A57", weight: 2.5, dashArray: "7 6"
-    }).bindTooltip("Offshore closing edge \u2014 approximate").addTo(shapeLayer);
-  });
-
   var all = [];
-  outers.forEach(function (o) { o.forEach(function (p) { all.push([p[1], p[0]]); }); });
-  map.fitBounds(all, { padding: [30, 30] });
+  built.outers.forEach(function (o) { o.forEach(function (p) { all.push([p[1], p[0]]); }); });
+  if (all.length) map.fitBounds(all, { padding: [30, 30] });
 }
 
-function toLatLng(ring) {
-  return ring.map(function (p) { return [p[1], p[0]]; });
+/* =====================================================================
+   Verdict
+   ===================================================================== */
+
+function checkLocation(lon, lat, label) {
+  if (!plotted) return;
+  var pt = [lon, lat], A = plotted.areas, B = plotted.built;
+  var inArea1, inCal, outState = null, inExcl = false;
+
+  if (A) {
+    inArea1 = pointInMultiPolygon(pt, A.area1);
+    inExcl = A.excluded.length ? pointInMultiPolygon(pt, A.excluded) : false;
+    if (A.clipped) { inCal = pointInMultiPolygon(pt, plotted.caMP); if (!inCal) outState = "outside California (another state, or at sea)"; }
+    else { var h = outsideCaliforniaHeuristic(lon, lat); if (h) outState = "in " + h; inCal = !h; }
+  } else {
+    var inO = B.outers.some(function (o) { return pointInRing(pt, o); });
+    inExcl = B.holes.some(function (hh) { return pointInRing(pt, hh); });
+    var h2 = outsideCaliforniaHeuristic(lon, lat); if (h2) outState = "in " + h2;
+    inArea1 = inO && !inExcl && !h2; inCal = !h2;
+  }
+
+  var nearApprox = Infinity;
+  B.approxEdges.forEach(function (e) { var d = distToSegment(pt, e[0], e[1]); if (d < nearApprox) nearApprox = d; });
+  var approxLimit = (A && A.clipped) ? 0.15 : 0.4;
+  var nearBoundary = A ? distToMultiPolygonEdge(pt, A.area1) : Infinity;
+
+  markerLayer.clearLayers();
+  L.circleMarker([lat, lon], { radius: 7, color: "#12283F", weight: 2,
+    fillColor: outState ? "#9AA5AF" : (inArea1 ? "#D98A2B" : "#FFFFFF"), fillOpacity: 1 }).addTo(markerLayer);
+
+  var headline = outState ? "Outside California" : (inArea1 ? "AREA 1" : "AREA 2");
+  verdictEl.style.display = "block";
+  verdictEl.style.borderLeftColor = outState ? "#7C93A8" : (inArea1 ? "#D98A2B" : "#9AA5AF");
+  var html = "<span class=\"big\">" + headline + "</span>";
+  if (outState) html += "This point is " + esc(outState) + ". The Area 1 / Area 2 split only applies within California.";
+  else if (inExcl) html += "Inside the excluded portion, so it is <b>not</b> Area 1.";
+  if (label) html += "<br>" + esc(label);
+  html += "<br><span class=\"coords\">" + lat.toFixed(5) + ", " + lon.toFixed(5) + "</span>";
+  if (!outState && nearApprox < approxLimit) {
+    html += "<div class=\"caution\">DO NOT RELY ON THIS RESULT. This location is within about " + Math.round(nearApprox * 69) +
+      " miles of an approximate edge (an offshore closure or an unresolved corner). Confirm the classification with the DIR before it is used to set a rate.</div>";
+  } else if (!outState && nearBoundary < 0.1) {
+    html += "<div class=\"near\">Within about " + Math.max(1, Math.round(nearBoundary * 69)) + " miles of the Area 1 boundary. Worth a DIR confirmation before bidding.</div>";
+  }
+  verdictEl.innerHTML = html;
 }
 
-/* ---------------- address lookup ---------------- */
+/* =====================================================================
+   Address lookup
+   ===================================================================== */
 
 function parseLatLon(s) {
   var m = s.match(/^\s*(-?\d+(?:\.\d+)?)\s*[, ]\s*(-?\d+(?:\.\d+)?)\s*$/);
@@ -974,138 +1046,99 @@ function parseLatLon(s) {
   if (Math.abs(a) > 90 || Math.abs(b) > 180) return null;
   return { lat: a, lon: b, label: a + ", " + b };
 }
-
 async function geocodeCensus(address) {
   var p = new URLSearchParams({ address: address, benchmark: "Public_AR_Current", format: "json" });
   var r = await fetch("https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?" + p);
   if (!r.ok) throw new Error("census " + r.status);
-  var d = await r.json();
-  var hit = d.result && d.result.addressMatches && d.result.addressMatches[0];
-  if (!hit) return null;
-  return { lat: hit.coordinates.y, lon: hit.coordinates.x, label: hit.matchedAddress };
+  var d = await r.json(), hit = d.result && d.result.addressMatches && d.result.addressMatches[0];
+  return hit ? { lat: hit.coordinates.y, lon: hit.coordinates.x, label: hit.matchedAddress } : null;
 }
-
 async function geocodeNominatim(address) {
   var p = new URLSearchParams({ q: address, format: "json", countrycodes: "us", limit: "1" });
   var r = await fetch("https://nominatim.openstreetmap.org/search?" + p);
   if (!r.ok) throw new Error("nominatim " + r.status);
   var d = await r.json();
-  if (!d.length) return null;
-  return { lat: +d[0].lat, lon: +d[0].lon, label: d[0].display_name };
+  return d.length ? { lat: +d[0].lat, lon: +d[0].lon, label: d[0].display_name } : null;
 }
-
 async function lookupAddress() {
   var raw = el("addr").value.trim();
   if (!raw) return;
-  if (!plotted) {
-    showBanner("error", "Plot a boundary first, then check a location against it.");
-    return;
-  }
+  if (!plotted) { showBanner("error", "Plot a boundary first, then check a location against it."); return; }
   var direct = parseLatLon(raw);
-  if (direct) { checkLocation(direct.lon, direct.lat, direct.label); return; }
-
-  var btn = el("addrBtn");
-  btn.disabled = true; btn.textContent = "\u2026";
+  if (direct) { checkLocation(direct.lon, direct.lat, direct.label); map.setView([direct.lat, direct.lon], 10); return; }
+  var btn = el("addrBtn"); btn.disabled = true; btn.textContent = "\u2026";
   try {
     var hit = null;
     try { hit = await geocodeCensus(raw); } catch (e) { /* fall through */ }
     if (!hit) hit = await geocodeNominatim(raw);
-    if (!hit) {
-      showBanner("error",
-        "Couldn't find that address. Try adding the city and state, or paste coordinates as <code>lat, lon</code>.");
-    } else {
-      clearBanner();
-      checkLocation(hit.lon, hit.lat, hit.label);
-      map.setView([hit.lat, hit.lon], 10);
-    }
+    if (!hit) showBanner("error", "Couldn't find that address. Try adding the city and state, or paste coordinates as <code>lat, lon</code>.");
+    else { clearBanner(); checkLocation(hit.lon, hit.lat, hit.label); map.setView([hit.lat, hit.lon], 10); }
   } catch (err) {
-    showBanner("error", "Address lookup failed: " + err.message + ". You can paste coordinates as <code>lat, lon</code> instead.");
-  } finally {
-    btn.disabled = false; btn.textContent = "Check";
-  }
+    showBanner("error", "Address lookup failed: " + esc(err.message) + ". You can paste coordinates as <code>lat, lon</code> instead.");
+  } finally { btn.disabled = false; btn.textContent = "Check"; }
 }
 
-el("addrBtn").addEventListener("click", lookupAddress);
-el("addr").addEventListener("keydown", function (e) { if (e.key === "Enter") lookupAddress(); });
-
-// The north and east state lines are straight and exact, so a point beyond
-// them is out of California and neither area applies. The coast is not
-// modelled, so nothing is claimed about points at sea.
-function outsideCalifornia(lon, lat) {
-  if (lat > 42.0) return "Oregon";
-  if (lon > -120.0 && lat >= 39.0) return "Nevada";
-  if (lat < 39.0 && lat > 35.0) {
-    var t = (39.0 - lat) / (39.0 - 35.002);
-    if (lon > -120.0 + t * (120.0 - 114.633)) return "Nevada";
-  }
-  return null;
-}
-
-function checkLocation(lon, lat, label) {
-  if (!plotted) return;
-
-  var outState = outsideCalifornia(lon, lat);
-  var inOuter = plotted.outers.some(function (o) { return pointInRing([lon, lat], o); });
-  var inHole = plotted.holes.some(function (h) { return pointInRing([lon, lat], h); });
-  var isArea1 = inOuter && !inHole && !outState;
-
-  var nearest = Infinity;
-  plotted.approxEdges.forEach(function (e) {
-    var d = distToSegment([lon, lat], e[0], e[1]);
-    if (d < nearest) nearest = d;
-  });
-  var nearApprox = nearest < 0.4; // roughly 27 miles
-
-  markerLayer.clearLayers();
-  L.circleMarker([lat, lon], {
-    radius: 7, color: "#12283F", weight: 2,
-    fillColor: outState ? "#9AA5AF" : (isArea1 ? "#D98A2B" : "#FFFFFF"), fillOpacity: 1
-  }).addTo(markerLayer);
-
-  var headline = outState ? "Outside California" : (isArea1 ? "AREA 1" : "AREA 2");
-  verdictEl.style.display = "block";
-  verdictEl.style.borderLeftColor = outState ? "#7C93A8" : (isArea1 ? "#D98A2B" : "#9AA5AF");
-
-  var html = "<span class=\"big\">" + headline + "</span>";
-  if (outState) {
-    html += "This point is in " + outState + ". The Area 1 / Area 2 split only applies within California.";
-  } else if (inHole) {
-    html += "Inside the excluded portion, so it is <b>not</b> Area 1.";
-  }
-  if (label) html += "<br>" + label.replace(/[<>]/g, "");
-  html += "<br><span class=\"coords\">" + lat.toFixed(5) + ", " + lon.toFixed(5) + "</span>";
-  if (nearApprox && !outState) {
-    html += "<div class=\"caution\">DO NOT RELY ON THIS RESULT. This location is within about " +
-      Math.round(nearest * 69) + " miles of an offshore closing edge, which this tool approximates " +
-      "rather than surveys. Confirm the classification with the DIR before it is used to set a rate.</div>";
-  }
-  verdictEl.innerHTML = html;
-}
+/* =====================================================================
+   Download
+   ===================================================================== */
 
 downloadBtn.addEventListener("click", function () {
   if (!plotted) return;
-  var close = function (r) {
-    return (r.length && (r[0][0] !== r[r.length - 1][0] || r[0][1] !== r[r.length - 1][1])) ? r.concat([r[0]]) : r;
-  };
-  var features = plotted.outers.map(function (outer) {
-    var mine = plotted.holes.filter(function (h) { return pointInRing(h[0], outer); });
-    return {
-      type: "Feature",
-      properties: {
-        area: "Area 1",
-        tool: "DHR Golf Boundary Plotter " + VERSION,
-        note: "State-line legs follow the surveyed CA border. Pacific legs are closed offshore and are approximate."
-      },
-      geometry: { type: "Polygon", coordinates: [close(outer)].concat(mine.map(close)) }
-    };
-  });
-  var blob = new Blob([JSON.stringify({ type: "FeatureCollection", features: features }, null, 2)],
-    { type: "application/geo+json" });
-  var url = URL.createObjectURL(blob);
-  var a = document.createElement("a");
-  a.href = url; a.download = "boundary.geojson"; a.click();
-  URL.revokeObjectURL(url);
+  var features = [];
+  var props = function (area) { return { area: area, tool: "DHR Golf Boundary Plotter " + VERSION,
+    coast: plotted.areas && plotted.areas.clipped ? caSource : "not clipped (approximate offshore closure)" }; };
+  if (plotted.areas) {
+    features.push({ type: "Feature", properties: props("Area 1"), geometry: { type: "MultiPolygon", coordinates: plotted.areas.area1 } });
+    if (plotted.areas.excluded.length) features.push({ type: "Feature", properties: props("Excluded from Area 1"), geometry: { type: "MultiPolygon", coordinates: plotted.areas.excluded } });
+  } else {
+    plotted.built.outers.forEach(function (o) {
+      features.push({ type: "Feature", properties: props("Area 1 (raw ring)"), geometry: { type: "Polygon", coordinates: [closeRingCoords(o)].concat(plotted.built.holes.map(closeRingCoords)) } });
+    });
+  }
+  var blob = new Blob([JSON.stringify({ type: "FeatureCollection", features: features }, null, 2)], { type: "application/geo+json" });
+  var url = URL.createObjectURL(blob), a = document.createElement("a");
+  a.href = url; a.download = "boundary.geojson"; a.click(); URL.revokeObjectURL(url);
 });
+
+/* =====================================================================
+   Listeners (kept at the bottom; script runs after the DOM exists)
+   ===================================================================== */
+
+el("exampleBtn").addEventListener("click", function () { descEl.value = EXAMPLE_TEXT; clearBanner(); });
+el("basemap").addEventListener("change", function (e) { setBasemap(e.target.value); });
+el("addrBtn").addEventListener("click", lookupAddress);
+el("addr").addEventListener("keydown", function (e) { if (e.key === "Enter") lookupAddress(); });
+
+// Visible input, FileReader with a callback. Hidden inputs and promise-based
+// file reads have both failed silently in the field.
+el("pdfInput").addEventListener("change", function (e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  if (typeof pdfjsLib === "undefined") { showBanner("error", "The PDF reader library did not load. Paste the text instead."); return; }
+  showBanner("warn", "Reading PDF\u2026");
+  var reader = new FileReader();
+  reader.onerror = function () { showBanner("error", "Couldn't read that file."); };
+  reader.onload = function () {
+    pdfjsLib.getDocument({ data: reader.result }).promise.then(function (pdf) {
+      var out = "", page = 1;
+      function next() {
+        if (page > pdf.numPages) return finishPdf(out, pdf.numPages);
+        pdf.getPage(page).then(function (p) { return p.getTextContent(); }).then(function (tc) {
+          out += tc.items.map(function (i) { return i.str; }).join(" ") + "\n"; page++; next();
+        });
+      }
+      next();
+    }).catch(function (err) { showBanner("error", "Couldn't read that PDF: " + esc(err.message)); });
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = "";
+});
+function finishPdf(out, pages) {
+  descEl.value = out.replace(/\s+/g, " ").trim();
+  var hits = (out.match(new RegExp(CORNER_SRC, "gi")) || []).length;
+  if (!hits) showBanner("error", "No township/range corners found in this PDF. If it's a scanned image rather than a text PDF, the text can't be extracted \u2014 copy the description in manually instead.");
+  else showBanner("warn", "Extracted text from " + pages + " page(s), containing " + hits + " corner references. <b>Check the box above and delete anything that isn't the boundary you want</b> \u2014 if the PDF holds more than one area description, they'll all be plotted together.");
+}
 </script>
 </body>
 </html>
