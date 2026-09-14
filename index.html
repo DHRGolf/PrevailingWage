@@ -38,8 +38,8 @@
   header .org { font-size: 13px; letter-spacing: 0.04em; color: var(--line-dim); }
   header h1 { font-size: 16px; font-weight: 600; margin: 0; }
   header .ver {
-    margin-left: auto; font-family: 'IBM Plex Mono', monospace;
-    font-size: 12px; color: var(--line-dim);
+    font-family: 'IBM Plex Mono', monospace; font-size: 13px;
+    color: var(--amber); letter-spacing: 0.04em;
   }
   .layout { display: flex; height: calc(100% - 49px); }
   aside {
@@ -157,6 +157,7 @@
   <span class="org">DHR GOLF</span>
   <h1>Boundary Plotter</h1>
   <span class="ver" id="verTag"></span>
+  <span style="margin-left:auto;"></span>
 </header>
 
 <div class="layout">
@@ -237,7 +238,7 @@
 </div>
 
 <script>
-var VERSION = "v1.4";
+var VERSION = "v1.5";
 document.getElementById("verTag").textContent = VERSION;
 
 pdfjsLib.GlobalWorkerOptions.workerSrc =
@@ -266,6 +267,10 @@ var MERIDIAN_SRC = "(Mount Diablo|Humboldt|San Bernardino)\\s+(?:Base\\s+(?:and\
 var NONPLSS_SRC = "(California\\s*/\\s*Nevada State Border|California\\s*/\\s*Oregon State Border|Pacific Ocean)";
 var EXCLUDE_SRC = "(excluding|less and except|save and except|excepting)";
 var DIR_SRC = "(North|South|East|West)erly";
+// Travel bearings always follow "Thence". Bearings that merely describe a line
+// ("on the extension of the Southerly line of Township 19S") must not be read
+// as direction of travel.
+var THENCE_DIR_SRC = "Thence\\s+" + DIR_SRC;
 
 var EXAMPLE_TEXT = "Commencing in the Pacific Ocean on the extension of the Southerly line of Township 19S, of the Mount Diablo Base and Meridian, Thence Easterly along the Southerly line of Township 19S, to the Northwest corner of Township 20S, Range 6E, Thence Southerly to the Southwest corner of Township 20S, Range 6E, Thence Easterly to the Northwest corner of Township 21S, Range 7E, Thence Southerly to the Southwest corner of Township 21S, Range 7E, Thence Easterly to the Northwest corner of Township 22S, Range 9E, Thence Southerly to the Southwest corner of Township 22S, Range 9E, Thence Easterly to the Northwest corner of Township 23S, Range 10E, Thence Southerly to the Southwest corner of Township 24S, Range 10E, Thence Easterly to the Southwest corner of Township 24S, Range 31E, Thence Northerly to the Northeast corner of Township 20S, Range 31E, Thence Westerly to the Southeast corner of Township 19S, Range 29E, Thence Northerly to the Northeast corner of Township 17S, Range 29E, Thence Westerly to the Southeast corner of Township 16S, Range 28E, Thence Northerly to the Northeast corner of Township 13S, Range 28E, Thence Westerly to the Southeast corner of Township 12S, Range 27E, Thence Northerly to the Northeast corner of Township 12S, Range 27E, Thence Westerly to the Southeast corner of Township 11S, Range 26E, Thence Northerly to the Northeast corner of Township 11S, Range 26E, Thence Westerly to the Southeast corner of Township 10S, Range 25E, Thence Northerly to the Northeast corner of Township 9S, Range 25E, Thence Westerly to the Southeast corner of Township 8S, Range 24E, Thence Northerly to the Northeast corner of Township 8S, Range 24E, Thence Westerly to the Southeast corner of Township 7S, Range 23E, Thence Northerly to the Northeast corner of Township 6S, Range 23E, Thence Westerly to the Southeast corner of Township 5S, Range 20E, Thence Northerly to the Northeast corner of Township 5S, Range 20E, Thence Westerly to the Southeast corner of Township 4S, Range 19E, Thence Northerly to the Northeast corner of Township 1S, Range 19E, Thence Westerly to the Southeast corner of Township 1N, Range 18E, Thence Northerly to the Northeast corner of Township 3N, Range 18E, Thence Westerly to the Southeast corner of Township 4N, Range 17E, Thence Northerly to the Northeast corner of Township 4N, Range 17E, Thence Westerly to the Southeast corner of Township 5N, Range 15E, Thence Northerly to the Northeast corner of Township 5N, Range 15E, Thence Westerly to the Southeast corner of Township 6N, Range 14E, Thence Northerly to the Northeast corner of Township 10N, Range 14E, Thence Easterly along the Southern line of Township 11N, to the California/Nevada State Border, Thence Northerly along the California/Nevada State Border to the Northerly line of Township 17N, Thence Westerly to the Southeast corner of Township 18N, Range 10E, Thence Northerly to the Northeast corner of Township 20N, Range 10E, Thence Westerly to the Southeast corner of Township 21N, Range 9E, Thence Northerly to the Northeast corner of Township 21N, Range 9E, Thence Westerly to the Southeast corner of Township 22N, Range 8E, Thence Northerly to the Northeast corner of Township 22N, Range 8E, Thence Westerly to the Northwest corner of Township 22N, Range 8E, Thence Northerly to the Southwest corner of Township 27N, Range 8E, Thence Easterly to the Southeast corner of Township 27N, Range 8E, Thence Northerly to the Northeast corner of Township 28N, Range 8E, Thence Westerly to the Southeast corner of Township 29N, Range 6E, Thence Northerly to the Northeast corner of Township 32N, Range 6E, Thence Westerly to the Northwest corner of Township 32N, Range 6E, Thence Northerly to the Northeast corner of Township 35N, Range 5E, Thence Westerly to the Southeast corner of Township 36N, Range 3E, Thence Northerly to the Northeast corner of township 36N, Range 3E, Thence Westerly to the Southeast corner of Township 37N, Range 1W, Thence Northerly to the Northeast corner of Township 38N, Range 1W, Thence Westerly to the Southeast corner of Township 39N, Range 2W, Thence Northerly to the Northeast corner of Township 40N, Range 2W, Thence Westerly to the Southeast corner of Township 41N, Range 4W, Thence Northerly to the Northeast corner of Township 42N, Range 4W, Thence Westerly to the Southeast corner of Township 43N, Range 5W, Thence Northerly to the California/Oregon State Border, Thence Westerly along the California/Oregon State Border to the Westerly Boundary of Township Range 8W, Thence Southerly to the Southwest corner of Township 43N, Range 8W, Thence Easterly to the Southeast corner of Township 43N, Range 8W, Thence Southerly to the Southwest corner of Township 42N, Range 7W, Thence Easterly to the Southeast corner of Township 42N, Range 7W, Thence Southerly to the Southwest corner of Township 41N, Range 6W, Thence Easterly to the Northwest corner of Township 40N, Range 5W, Thence Southerly to the Southwest corner of Township 38N, Range 5W, Thence Westerly to the Northwest corner of Township 37N, Range 6W, Thence Southerly to the Southwest corner of Township 35N, Range 6W, Thence Westerly to the Northwest corner of Township 34N, Range 10W, Thence Southerly to the Southwest corner of Township 31N, Range 10W, Thence Easterly to the Northwest corner of Township 30N, Range 9W, Thence Southerly to the Southwest corner of Township 30N, Range 9W, Thence Easterly to the Northwest corner of Township 29N, Range 8W, Thence Southerly to the Southwest corner of Township 23N, Range 8W, Thence Easterly to the Northwest corner of Township 22N, Range 6W, Thence Southerly to the Southwest corner of Township 16N, Range 6W, Thence Westerly to the Southeast corner of Township 16N, Range 9W, Thence Northerly to the Northeast corner of Township 16N, Range 9W, Thence Westerly to the Southeast corner of Township 17N, Range 12W, Thence Northerly to the Northeast corner of Township 18N, Range 12W, Thence Westerly to the Northwest corner of Township 18N, Range 15W, Thence Southerly to the Southwest corner of Township 14N, Range 15W, Thence Easterly to the Northwest corner of Township 13N, Range 14W, Thence Southerly to the Southwest corner of Township 13N, Range 14W, Thence Easterly to the Northwest corner of Township 12N, Range 13W, Thence Southerly to the Southwest corner of Township 12N, Range 13W, Thence Easterly to the Northwest corner of Township 11N, Range 12W, Thence Southerly into the Pacific Ocean and Commencing in the Pacific Ocean on the extension of the Humboldt Base Line, Thence Easterly to the Northwest corner of Township 1S, Range 2E, Thence Southerly to the Southwest corner of Township 2S, Range 2E, Thence Easterly to the Northwest corner of Township 3S, Range 3E, Thence Southerly to the Southwest corner of Township 5S, Range 3E, Thence Easterly to the Southeast corner of Township 5S, Range 4E, Thence Northerly to the Northeast corner of Township 4S, Range 4E, Thence Westerly to the Southeast corner of Township 3S, Range 3E, Thence Northerly to the Northeast corner of Township 5N, Range 3E, Thence Easterly to the Southeast corner of Township 6N, Range 5E, Thence Northerly to the Northeast corner of Township 7N, Range 5E, Thence Westerly to the Southeast corner of Township 8N, Range 3E, Thence Northerly to the Northeast corner of Township 9N, Range 3E, Thence Westerly to the Southeast corner of Township 10N, Range 1E, Thence Northerly to the Northeast corner of Township 13N, Range 1E, Thence Westerly into the Pacific Ocean, excluding that portion of Northern California contained within the following lines: Commencing at the Southwest corner of Township 12N, Range 11E, of the Mount Diablo Base and Meridian, Thence Easterly to the Southeast corner of Township 12N, Range 16E, Thence Northerly to the Northeast corner of Township 12N, Range 16E, Thence Westerly to the Southeast corner of Township 13N, Range 15E, Thence Northerly to the Northeast corner of Township 13N, Range 15E, Thence Westerly to the Southeast corner of Township 14N, Range 14E, Thence Northerly to the Northeast corner of Township 16N, Range 14E, Thence Westerly to the Northwest corner of Township 16N, Range 12E, Thence Southerly to the Southwest corner of Township 16N, Range 12E, Thence Westerly to the Northwest corner of Township 15N, Range 11E, Thence Southerly to the point of beginning at the Southwest corner of Township 12N, Range 11E.";
 
@@ -281,15 +286,15 @@ function opposite(d) {
   return { N: "S", S: "N", E: "W", W: "E" }[d] || null;
 }
 
-// First compass bearing stated after a given position in the text.
+// First travel bearing stated after a given position in the text.
 function dirAfter(text, idx) {
-  var m = new RegExp(DIR_SRC, "i").exec(text.slice(idx));
+  var m = new RegExp(THENCE_DIR_SRC, "i").exec(text.slice(idx));
   return m ? m[1].charAt(0).toUpperCase() : null;
 }
 
-// Last compass bearing stated before a given position in the text.
+// Last travel bearing stated before a given position in the text.
 function dirBefore(text, idx) {
-  var re = new RegExp(DIR_SRC, "gi"), s = text.slice(0, idx), m, last = null;
+  var re = new RegExp(THENCE_DIR_SRC, "gi"), s = text.slice(0, idx), m, last = null;
   while ((m = re.exec(s)) !== null) last = m[1];
   return last ? last.charAt(0).toUpperCase() : null;
 }
@@ -518,6 +523,89 @@ function segIntersect(p1, p2, p3, p4) {
   var u = ((p3[0] - p1[0]) * (p2[1] - p1[1]) - (p3[1] - p1[1]) * (p2[0] - p1[0])) / d;
   if (t < 0 || t > 1 || u < 0 || u > 1) return null;
   return [p1[0] + t * (p2[0] - p1[0]), p1[1] + t * (p2[1] - p1[1])];
+}
+
+// A closed boundary must not cross itself. If it does, the fill and the
+// point-in-polygon test both flip parity inside the crossed lobe and agree
+// with each other while being wrong, so this is checked rather than trusted.
+function selfIntersections(ring) {
+  var n = ring.length, hits = 0;
+  for (var i = 0; i < n; i++) {
+    for (var j = i + 2; j < n; j++) {
+      if (i === 0 && j === n - 1) continue;
+      if (segIntersect(ring[i], ring[(i + 1) % n], ring[j], ring[(j + 1) % n])) hits++;
+    }
+  }
+  return hits;
+}
+
+// Turn parsed rings whose corners have been resolved into closed coordinate
+// rings. Kept separate from the click handler so it can be tested directly.
+function buildRings(rings) {
+  var outers = [], holes = [], approxEdges = [];
+
+  for (var q = 0; q < rings.length; q++) {
+    var ring = rings[q];
+    var pts = [], gapQueue = [], shortcut = false;
+    var segs = ring.segments;
+
+    for (var si2 = 0; si2 < segs.length; si2++) {
+      var s2 = segs[si2];
+      if (s2.type === "gap") {
+        if (/State Border/i.test(s2.text)) gapQueue.push(si2);
+        continue;
+      }
+      // A corner neither BLM nor its neighbours could supply. Carry on with a
+      // straight shortcut, but register it so the verdict flags anything near it.
+      if (!s2.pt) { shortcut = true; continue; }
+      if (shortcut && pts.length) {
+        approxEdges.push([pts[pts.length - 1], s2.pt]);
+        shortcut = false;
+      }
+      if (gapQueue.length && pts.length) {
+        // Walk the real state line between the flanking corners.
+        var a = projectToBorder(pts[pts.length - 1]);
+        var b = projectToBorder(s2.pt);
+        var path = borderPath(a, b);
+        for (var z = 0; z < path.length; z++) pts.push(path[z]);
+        gapQueue = [];
+      } else if (gapQueue.length) {
+        gapQueue = [];
+      }
+      pts.push(s2.pt);
+    }
+
+    if (pts.length < 3) continue;
+
+    // Close the ring.
+    if (ring.startsInOcean || ring.endsInOcean) {
+      var FAR = 14;
+      var headDir = ring.startDir || "W";
+      var tailDir = ring.endDir || "W";
+      var headEnd = stepTo(pts[0], headDir, FAR);
+      var tailEnd = stepTo(pts[pts.length - 1], tailDir, FAR);
+      var meet = (ring.startsInOcean && ring.endsInOcean)
+        ? segIntersect(pts[0], headEnd, pts[pts.length - 1], tailEnd) : null;
+
+      if (meet) {
+        // Both legs run out to sea and cross. Stopping both at the crossing is
+        // the smallest closure that honours the two stated bearings.
+        approxEdges.push([pts[pts.length - 1], meet]);
+        approxEdges.push([meet, pts[0]]);
+        pts = [meet].concat(pts);
+      } else {
+        var head = ring.startsInOcean ? capTo(pts[0], headDir) : null;
+        var tail = ring.endsInOcean ? capTo(pts[pts.length - 1], tailDir) : null;
+        if (head) { approxEdges.push([head, pts[0]]); pts = [head].concat(pts); }
+        if (tail) { approxEdges.push([pts[pts.length - 1], tail]); pts.push(tail); }
+        approxEdges.push([pts[pts.length - 1], pts[0]]);
+      }
+    }
+
+    (ring.role === "hole" ? holes : outers).push(pts);
+  }
+
+  return { outers: outers, holes: holes, approxEdges: approxEdges };
 }
 
 function stepTo(pt, dir, far) {
@@ -780,69 +868,8 @@ plotBtn.addEventListener("click", async function () {
   }
 
   // Build rings.
-  var outers = [], holes = [], approxEdges = [], labels = [];
-
-  for (var q = 0; q < rings.length; q++) {
-    var ring = rings[q];
-    var pts = [], gapQueue = [], shortcut = false;
-    var segs = ring.segments;
-
-    for (var si2 = 0; si2 < segs.length; si2++) {
-      var s2 = segs[si2];
-      if (s2.type === "gap") {
-        if (/State Border/i.test(s2.text)) gapQueue.push(si2);
-        continue;
-      }
-      // A corner neither BLM nor its neighbours could supply. Carry on with a
-      // straight shortcut, but register it so the verdict flags anything near it.
-      if (!s2.pt) { shortcut = true; continue; }
-      if (shortcut && pts.length) {
-        approxEdges.push([pts[pts.length - 1], s2.pt]);
-        shortcut = false;
-      }
-      if (gapQueue.length && pts.length) {
-        // Walk the real state line between the flanking corners.
-        var a = projectToBorder(pts[pts.length - 1]);
-        var b = projectToBorder(s2.pt);
-        var path = borderPath(a, b);
-        for (var z = 0; z < path.length; z++) pts.push(path[z]);
-        gapQueue = [];
-      } else if (gapQueue.length) {
-        gapQueue = [];
-      }
-      pts.push(s2.pt);
-    }
-
-    if (pts.length < 3) continue;
-
-    // Close the ring.
-    if (ring.startsInOcean || ring.endsInOcean) {
-      var FAR = 14;
-      var headDir = ring.startDir || "W";
-      var tailDir = ring.endDir || "W";
-      var headEnd = stepTo(pts[0], headDir, FAR);
-      var tailEnd = stepTo(pts[pts.length - 1], tailDir, FAR);
-      var meet = (ring.startsInOcean && ring.endsInOcean)
-        ? segIntersect(pts[0], headEnd, pts[pts.length - 1], tailEnd) : null;
-
-      if (meet) {
-        // Both legs run out to sea and cross. Stopping both at the crossing is
-        // the smallest closure that honours the two stated bearings.
-        approxEdges.push([pts[pts.length - 1], meet]);
-        approxEdges.push([meet, pts[0]]);
-        pts = [meet].concat(pts);
-      } else {
-        var head = ring.startsInOcean ? capTo(pts[0], headDir) : null;
-        var tail = ring.endsInOcean ? capTo(pts[pts.length - 1], tailDir) : null;
-        if (head) { approxEdges.push([head, pts[0]]); pts = [head].concat(pts); }
-        if (tail) { approxEdges.push([pts[pts.length - 1], tail]); pts.push(tail); }
-        approxEdges.push([pts[pts.length - 1], pts[0]]);
-      }
-    }
-
-    (ring.role === "hole" ? holes : outers).push(pts);
-    labels.push(ring.label);
-  }
+  var built = buildRings(rings);
+  var outers = built.outers, holes = built.holes, approxEdges = built.approxEdges;
 
   if (!outers.length) {
     showBanner("error", "No complete area could be built from this description.");
@@ -863,6 +890,9 @@ plotBtn.addEventListener("click", async function () {
     else pairedHoles.push({ host: host, ring: holes[h] });
   }
 
+  var crossings = 0;
+  for (var ci = 0; ci < outers.length; ci++) crossings += selfIntersections(outers[ci]);
+
   drawAll(outers, pairedHoles, approxEdges);
 
   plotted = { outers: outers, holes: pairedHoles.map(function (x) { return x.ring; }), approxEdges: approxEdges };
@@ -870,6 +900,12 @@ plotBtn.addEventListener("click", async function () {
   downloadBtn.style.display = "inline";
 
   var msgs = [], kind = "warn";
+  if (crossings) {
+    kind = "error";
+    msgs.push("<b>The finished boundary crosses itself in " + crossings + " place(s).</b> " +
+      "Shading and verdicts inside a crossed lobe will both be wrong in the same direction, " +
+      "so nothing here should be relied on until this is resolved.");
+  }
   if (derived) msgs.push(derived + " corner(s) were not in BLM's data (usually unsurveyed land) and were rebuilt exactly from the adjoining townships' shared section lines.");
   if (approxDerived) msgs.push(approxDerived + " corner(s) were rebuilt from townships whose records are clipped to the coastline, so those points are approximate.");
   if (unresolved) {
@@ -1018,7 +1054,7 @@ function checkLocation(lon, lat, label) {
     var d = distToSegment([lon, lat], e[0], e[1]);
     if (d < nearest) nearest = d;
   });
-  var nearApprox = nearest < 0.25; // roughly 15 nautical miles
+  var nearApprox = nearest < 0.4; // roughly 27 miles
 
   markerLayer.clearLayers();
   L.circleMarker([lat, lon], {
